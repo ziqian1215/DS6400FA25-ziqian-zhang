@@ -1,0 +1,7 @@
+# Measures of model performance
+
+$$
+E[Y|X] = X\beta \quad V[Y|X] = \sigma^2
+$$
+
+This is my new chapter.

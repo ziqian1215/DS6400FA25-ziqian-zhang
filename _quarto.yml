@@ -1,0 +1,26 @@
+project:
+  type: book
+
+book:
+  title: "ML1 Portoflio"
+  author: "Ziqian Zhang"
+  date: "9/16/2025"
+  chapters:
+    - index.qmd
+    - intro.qmd
+    - 01-performance-measures.qmd
+    - summary.qmd
+    - references.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme:
+      - cosmo
+      - brand
+  # pdf:
+  #   documentclass: scrreprt
+
+
+
