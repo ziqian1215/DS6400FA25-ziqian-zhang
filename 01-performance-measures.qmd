@@ -1,7 +1,185 @@
 # Measures of model performance
 
+## Random Forest
+> **Note.** Random Forest can be applied to both classification and regression tasks.  
+> In this chapter, we focus **only on the classification setting**, where the target variable $y_i \in \{0,1\}$ and each tree outputs class probabilities. The formulas and evaluation metrics described below are all for classification.
+
+Let the dataset be
+
 $$
-E[Y|X] = X\beta \quad V[Y|X] = \sigma^2
+D=\{(x_i,y_i)\}_{i=1}^N,\quad x_i\in\mathbb{R}^p,\ y_i\in\{0,1\}.
 $$
 
-This is my new chapter.
+A Random Forest is an ensemble of $B$ classification trees $\{T_b\}_{b=1}^B$. Each tree is trained using:
+
+### Bootstrap sampling
+
+Draw a bootstrap sample $D_b^*$ from $D$ by sampling $N$ observations **with replacement**.
+
+$$
+D_b^* = \{(x_{i_1},y_{i_1}),\dots,(x_{i_N},y_{i_N})\},\quad i_j \sim \text{Unif}\{1,\dots,N\}.
+$$
+
+### Random feature selection
+
+At each internal node, randomly select $m_{\text{try}}$ features from the full set $\{1,\dots,p\}$.  
+Among the possible splits on these features, choose the one that maximizes the impurity decrease:
+
+$$
+\Delta \mathcal{I} 
+= \mathcal{I}(\text{parent}) 
+-\sum_{c\in\{\text{left},\text{right}\}}
+\frac{n_c}{n_{\text{parent}}}\mathcal{I}(c).
+$$
+
+A common impurity measure is the Gini impurity:
+
+$$
+\mathcal{I}_{\text{Gini}}(\text{node}) = 1 - \sum_{k\in\{0,1\}}\hat{\pi}_k^2,
+\qquad 
+\hat{\pi}_k = \frac{1}{n_{\text{node}}}\sum_{i\in\text{node}}\mathbb{1}(y_i=k).
+$$
+
+### Prediction
+
+Each tree $T_b$ produces a probability estimate for the positive class:
+
+$$
+T_b(x) = \hat{p}_b(y=1\mid x).
+$$
+
+The Random Forest averages these:
+
+$$
+\hat{p}(x) = \frac{1}{B}\sum_{b=1}^B T_b(x),
+\qquad
+\hat{y}(x) = \mathbb{1}\{\hat{p}(x) \ge 0.5\}.
+$$
+
+This reduces variance and improves generalization.
+
+---
+
+## Ten-Fold Cross-Validation
+
+We split $D$ into 10 disjoint folds of (approximately) equal size:
+
+$$
+D = \bigcup_{k=1}^{10} D_k,\qquad D_i\cap D_j = \varnothing \ (i\neq j).
+$$
+
+For each fold $k$:
+
+- Training set: $D^{(-k)} = D \setminus D_k$  
+- Test set: $D_k$
+
+Train the Random Forest on $D^{(-k)}$ to obtain a fitted model $f_k(\cdot)$.  
+Use it to produce predictions on all samples in $D_k$:
+
+$$
+\{(\hat{p}_k(x_i),\hat{y}_k(x_i),y_i)\}_{(x_i,y_i)\in D_k}.
+$$
+
+Let $M(\cdot)$ be a performance metric (Accuracy, F1, etc).  
+Define the fold-wise performance as
+
+$$
+M_k = M\big(\{(\hat{y}_k(x_i),y_i)\}_{(x_i,y_i)\in D_k}\big).
+$$
+
+The cross-validated estimate is
+
+$$
+\overline{M} = \frac{1}{10}\sum_{k=1}^{10} M_k.
+$$
+
+### Standard error of the 10-fold CV mean (derivation)
+
+Let $M_1,\dots,M_n$ be the performance values (e.g., accuracy, F1, AUC, or MSE) computed on each of the $n$ CV folds. For 10-fold CV, $n=10$.
+
+**Step 1 (fold mean).**  
+Define the mean across folds
+$$
+\overline{M} \;=\; \frac{1}{n}\sum_{k=1}^n M_k \, .
+$$
+
+**Step 2 (sample variance across folds).**  
+Use the unbiased sample variance with Bessel’s correction
+$$
+s^2 \;=\; \frac{1}{n-1}\sum_{k=1}^n \big(M_k-\overline{M}\big)^2 \, .
+$$
+
+**Step 3 (standard error of the mean).**  
+The standard error of the mean is the standard deviation of $\overline{M}$.  
+We estimate it by plugging in the sample standard deviation $s$:
+$$
+\widehat{\mathrm{SE}}(\overline{M}) \;=\; \frac{s}{\sqrt{n}} 
+\;=\; \sqrt{\frac{s^2}{n}} \, .
+$$
+
+**Step 4 (combine Steps 2 and 3).**  
+Substitute $s^2$ from Step 2:
+$$
+\widehat{\mathrm{SE}}(\overline{M})
+\;=\;
+\sqrt{ \frac{1}{n}\cdot \frac{1}{n-1} \sum_{k=1}^n \big(M_k-\overline{M}\big)^2 }
+\;=\;
+\sqrt{ \frac{1}{n(n-1)} \sum_{k=1}^n \big(M_k-\overline{M}\big)^2 } \, .
+$$
+
+For 10-fold CV ($n=10$),
+$$
+\widehat{\mathrm{SE}}(\overline{M})
+\;=\;
+\sqrt{ \frac{1}{10(10-1)} \sum_{k=1}^{10} \big(M_k-\overline{M}\big)^2 } \, .
+$$
+
+---
+
+## Performance Metrics
+
+On a given test set, define confusion matrix counts:
+
+$$
+TP=\sum \mathbb{1}\{y_i=1,\hat{y}_i=1\},\quad
+FP=\sum \mathbb{1}\{y_i=0,\hat{y}_i=1\},\quad
+TN=\sum \mathbb{1}\{y_i=0,\hat{y}_i=0\},\quad
+FN=\sum \mathbb{1}\{y_i=1,\hat{y}_i=0\}.
+$$
+
+Then:
+
+$$
+\mathrm{Accuracy}=\frac{TP+TN}{TP+TN+FP+FN},
+\qquad
+\mathrm{Precision}=\frac{TP}{TP+FP},
+\qquad
+\mathrm{Recall}=\frac{TP}{TP+FN},
+$$
+
+$$
+\mathrm{F1}=2\frac{\mathrm{Precision}\cdot\mathrm{Recall}}{\mathrm{Precision}+\mathrm{Recall}}.
+$$
+
+AUC is the area under the ROC curve:
+
+$$
+\mathrm{AUC} = \Pr(S^+ > S^-)
+$$
+
+where $S^+$ and $S^-$ are the scores from randomly drawn positive and negative examples.
+
+---
+
+## Combining RF and CV
+
+For each fold $k$, compute the metrics on the test set $D_k$.  
+For example, cross-validated accuracy is
+
+$$
+\overline{\mathrm{Acc}} = \frac{1}{10}\sum_{k=1}^{10}
+\frac{TP_k+TN_k}{TP_k+TN_k+FP_k+FN_k}.
+$$
+
+Do the same for Precision, Recall, F1, and AUC.  
+These $\overline{M}$ values represent the estimated generalization performance of the Random Forest model.

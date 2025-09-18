@@ -174,8 +174,25 @@ window.Quarto = {
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
-        
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#random-forest" id="toc-random-forest" class="nav-link active" data-scroll-target="#random-forest"><span class="header-section-number">2.1</span> Random Forest</a>
+  <ul class="collapse">
+  <li><a href="#bootstrap-sampling" id="toc-bootstrap-sampling" class="nav-link" data-scroll-target="#bootstrap-sampling"><span class="header-section-number">2.1.1</span> Bootstrap sampling</a></li>
+  <li><a href="#random-feature-selection" id="toc-random-feature-selection" class="nav-link" data-scroll-target="#random-feature-selection"><span class="header-section-number">2.1.2</span> Random feature selection</a></li>
+  <li><a href="#prediction" id="toc-prediction" class="nav-link" data-scroll-target="#prediction"><span class="header-section-number">2.1.3</span> Prediction</a></li>
+  </ul></li>
+  <li><a href="#ten-fold-cross-validation" id="toc-ten-fold-cross-validation" class="nav-link" data-scroll-target="#ten-fold-cross-validation"><span class="header-section-number">2.2</span> Ten-Fold Cross-Validation</a>
+  <ul class="collapse">
+  <li><a href="#standard-error-of-the-10-fold-cv-mean-derivation" id="toc-standard-error-of-the-10-fold-cv-mean-derivation" class="nav-link" data-scroll-target="#standard-error-of-the-10-fold-cv-mean-derivation"><span class="header-section-number">2.2.1</span> Standard error of the 10-fold CV mean (derivation)</a></li>
+  </ul></li>
+  <li><a href="#performance-metrics" id="toc-performance-metrics" class="nav-link" data-scroll-target="#performance-metrics"><span class="header-section-number">2.3</span> Performance Metrics</a></li>
+  <li><a href="#combining-rf-and-cv" id="toc-combining-rf-and-cv" class="nav-link" data-scroll-target="#combining-rf-and-cv"><span class="header-section-number">2.4</span> Combining RF and CV</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -199,12 +216,156 @@ window.Quarto = {
 </header>
 
 
+<section id="random-forest" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="random-forest"><span class="header-section-number">2.1</span> Random Forest</h2>
+<blockquote class="blockquote">
+<p><strong>Note.</strong> Random Forest can be applied to both classification and regression tasks.<br>
+In this chapter, we focus <strong>only on the classification setting</strong>, where the target variable <span class="math inline">\(y_i \in \{0,1\}\)</span> and each tree outputs class probabilities. The formulas and evaluation metrics described below are all for classification.</p>
+</blockquote>
+<p>Let the dataset be</p>
 <p><span class="math display">\[
-E[Y|X] = X\beta \quad V[Y|X] = \sigma^2
+D=\{(x_i,y_i)\}_{i=1}^N,\quad x_i\in\mathbb{R}^p,\ y_i\in\{0,1\}.
 \]</span></p>
-<p>This is my new chapter.</p>
+<p>A Random Forest is an ensemble of <span class="math inline">\(B\)</span> classification trees <span class="math inline">\(\{T_b\}_{b=1}^B\)</span>. Each tree is trained using:</p>
+<section id="bootstrap-sampling" class="level3" data-number="2.1.1">
+<h3 data-number="2.1.1" class="anchored" data-anchor-id="bootstrap-sampling"><span class="header-section-number">2.1.1</span> Bootstrap sampling</h3>
+<p>Draw a bootstrap sample <span class="math inline">\(D_b^*\)</span> from <span class="math inline">\(D\)</span> by sampling <span class="math inline">\(N\)</span> observations <strong>with replacement</strong>.</p>
+<p><span class="math display">\[
+D_b^* = \{(x_{i_1},y_{i_1}),\dots,(x_{i_N},y_{i_N})\},\quad i_j \sim \text{Unif}\{1,\dots,N\}.
+\]</span></p>
+</section>
+<section id="random-feature-selection" class="level3" data-number="2.1.2">
+<h3 data-number="2.1.2" class="anchored" data-anchor-id="random-feature-selection"><span class="header-section-number">2.1.2</span> Random feature selection</h3>
+<p>At each internal node, randomly select <span class="math inline">\(m_{\text{try}}\)</span> features from the full set <span class="math inline">\(\{1,\dots,p\}\)</span>.<br>
+Among the possible splits on these features, choose the one that maximizes the impurity decrease:</p>
+<p><span class="math display">\[
+\Delta \mathcal{I}
+= \mathcal{I}(\text{parent})
+-\sum_{c\in\{\text{left},\text{right}\}}
+\frac{n_c}{n_{\text{parent}}}\mathcal{I}(c).
+\]</span></p>
+<p>A common impurity measure is the Gini impurity:</p>
+<p><span class="math display">\[
+\mathcal{I}_{\text{Gini}}(\text{node}) = 1 - \sum_{k\in\{0,1\}}\hat{\pi}_k^2,
+\qquad
+\hat{\pi}_k = \frac{1}{n_{\text{node}}}\sum_{i\in\text{node}}\mathbb{1}(y_i=k).
+\]</span></p>
+</section>
+<section id="prediction" class="level3" data-number="2.1.3">
+<h3 data-number="2.1.3" class="anchored" data-anchor-id="prediction"><span class="header-section-number">2.1.3</span> Prediction</h3>
+<p>Each tree <span class="math inline">\(T_b\)</span> produces a probability estimate for the positive class:</p>
+<p><span class="math display">\[
+T_b(x) = \hat{p}_b(y=1\mid x).
+\]</span></p>
+<p>The Random Forest averages these:</p>
+<p><span class="math display">\[
+\hat{p}(x) = \frac{1}{B}\sum_{b=1}^B T_b(x),
+\qquad
+\hat{y}(x) = \mathbb{1}\{\hat{p}(x) \ge 0.5\}.
+\]</span></p>
+<p>This reduces variance and improves generalization.</p>
+<hr>
+</section>
+</section>
+<section id="ten-fold-cross-validation" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="ten-fold-cross-validation"><span class="header-section-number">2.2</span> Ten-Fold Cross-Validation</h2>
+<p>We split <span class="math inline">\(D\)</span> into 10 disjoint folds of (approximately) equal size:</p>
+<p><span class="math display">\[
+D = \bigcup_{k=1}^{10} D_k,\qquad D_i\cap D_j = \varnothing \ (i\neq j).
+\]</span></p>
+<p>For each fold <span class="math inline">\(k\)</span>:</p>
+<ul>
+<li>Training set: <span class="math inline">\(D^{(-k)} = D \setminus D_k\)</span><br>
+</li>
+<li>Test set: <span class="math inline">\(D_k\)</span></li>
+</ul>
+<p>Train the Random Forest on <span class="math inline">\(D^{(-k)}\)</span> to obtain a fitted model <span class="math inline">\(f_k(\cdot)\)</span>.<br>
+Use it to produce predictions on all samples in <span class="math inline">\(D_k\)</span>:</p>
+<p><span class="math display">\[
+\{(\hat{p}_k(x_i),\hat{y}_k(x_i),y_i)\}_{(x_i,y_i)\in D_k}.
+\]</span></p>
+<p>Let <span class="math inline">\(M(\cdot)\)</span> be a performance metric (Accuracy, F1, etc).<br>
+Define the fold-wise performance as</p>
+<p><span class="math display">\[
+M_k = M\big(\{(\hat{y}_k(x_i),y_i)\}_{(x_i,y_i)\in D_k}\big).
+\]</span></p>
+<p>The cross-validated estimate is</p>
+<p><span class="math display">\[
+\overline{M} = \frac{1}{10}\sum_{k=1}^{10} M_k.
+\]</span></p>
+<section id="standard-error-of-the-10-fold-cv-mean-derivation" class="level3" data-number="2.2.1">
+<h3 data-number="2.2.1" class="anchored" data-anchor-id="standard-error-of-the-10-fold-cv-mean-derivation"><span class="header-section-number">2.2.1</span> Standard error of the 10-fold CV mean (derivation)</h3>
+<p>Let <span class="math inline">\(M_1,\dots,M_n\)</span> be the performance values (e.g., accuracy, F1, AUC, or MSE) computed on each of the <span class="math inline">\(n\)</span> CV folds. For 10-fold CV, <span class="math inline">\(n=10\)</span>.</p>
+<p><strong>Step 1 (fold mean).</strong><br>
+Define the mean across folds <span class="math display">\[
+\overline{M} \;=\; \frac{1}{n}\sum_{k=1}^n M_k \, .
+\]</span></p>
+<p><strong>Step 2 (sample variance across folds).</strong><br>
+Use the unbiased sample variance with Bessel’s correction <span class="math display">\[
+s^2 \;=\; \frac{1}{n-1}\sum_{k=1}^n \big(M_k-\overline{M}\big)^2 \, .
+\]</span></p>
+<p><strong>Step 3 (standard error of the mean).</strong><br>
+The standard error of the mean is the standard deviation of <span class="math inline">\(\overline{M}\)</span>.<br>
+We estimate it by plugging in the sample standard deviation <span class="math inline">\(s\)</span>: <span class="math display">\[
+\widehat{\mathrm{SE}}(\overline{M}) \;=\; \frac{s}{\sqrt{n}}
+\;=\; \sqrt{\frac{s^2}{n}} \, .
+\]</span></p>
+<p><strong>Step 4 (combine Steps 2 and 3).</strong><br>
+Substitute <span class="math inline">\(s^2\)</span> from Step 2: <span class="math display">\[
+\widehat{\mathrm{SE}}(\overline{M})
+\;=\;
+\sqrt{ \frac{1}{n}\cdot \frac{1}{n-1} \sum_{k=1}^n \big(M_k-\overline{M}\big)^2 }
+\;=\;
+\sqrt{ \frac{1}{n(n-1)} \sum_{k=1}^n \big(M_k-\overline{M}\big)^2 } \, .
+\]</span></p>
+<p>For 10-fold CV (<span class="math inline">\(n=10\)</span>), <span class="math display">\[
+\widehat{\mathrm{SE}}(\overline{M})
+\;=\;
+\sqrt{ \frac{1}{10(10-1)} \sum_{k=1}^{10} \big(M_k-\overline{M}\big)^2 } \, .
+\]</span></p>
+<hr>
+</section>
+</section>
+<section id="performance-metrics" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="performance-metrics"><span class="header-section-number">2.3</span> Performance Metrics</h2>
+<p>On a given test set, define confusion matrix counts:</p>
+<p><span class="math display">\[
+TP=\sum \mathbb{1}\{y_i=1,\hat{y}_i=1\},\quad
+FP=\sum \mathbb{1}\{y_i=0,\hat{y}_i=1\},\quad
+TN=\sum \mathbb{1}\{y_i=0,\hat{y}_i=0\},\quad
+FN=\sum \mathbb{1}\{y_i=1,\hat{y}_i=0\}.
+\]</span></p>
+<p>Then:</p>
+<p><span class="math display">\[
+\mathrm{Accuracy}=\frac{TP+TN}{TP+TN+FP+FN},
+\qquad
+\mathrm{Precision}=\frac{TP}{TP+FP},
+\qquad
+\mathrm{Recall}=\frac{TP}{TP+FN},
+\]</span></p>
+<p><span class="math display">\[
+\mathrm{F1}=2\frac{\mathrm{Precision}\cdot\mathrm{Recall}}{\mathrm{Precision}+\mathrm{Recall}}.
+\]</span></p>
+<p>AUC is the area under the ROC curve:</p>
+<p><span class="math display">\[
+\mathrm{AUC} = \Pr(S^+ &gt; S^-)
+\]</span></p>
+<p>where <span class="math inline">\(S^+\)</span> and <span class="math inline">\(S^-\)</span> are the scores from randomly drawn positive and negative examples.</p>
+<hr>
+</section>
+<section id="combining-rf-and-cv" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="combining-rf-and-cv"><span class="header-section-number">2.4</span> Combining RF and CV</h2>
+<p>For each fold <span class="math inline">\(k\)</span>, compute the metrics on the test set <span class="math inline">\(D_k\)</span>.<br>
+For example, cross-validated accuracy is</p>
+<p><span class="math display">\[
+\overline{\mathrm{Acc}} = \frac{1}{10}\sum_{k=1}^{10}
+\frac{TP_k+TN_k}{TP_k+TN_k+FP_k+FN_k}.
+\]</span></p>
+<p>Do the same for Precision, Recall, F1, and AUC.<br>
+These <span class="math inline">\(\overline{M}\)</span> values represent the estimated generalization performance of the Random Forest model.</p>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

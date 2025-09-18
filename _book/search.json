@@ -24,7 +24,7 @@
     "href": "01-performance-measures.html",
     "title": "2  Measures of model performance",
     "section": "",
-    "text": "\\[\nE[Y|X] = X\\beta \\quad V[Y|X] = \\sigma^2\n\\]\nThis is my new chapter.",
+    "text": "2.1 Random Forest\nLet the dataset be\n\\[\nD=\\{(x_i,y_i)\\}_{i=1}^N,\\quad x_i\\in\\mathbb{R}^p,\\ y_i\\in\\{0,1\\}.\n\\]\nA Random Forest is an ensemble of \\(B\\) classification trees \\(\\{T_b\\}_{b=1}^B\\). Each tree is trained using:",
     "crumbs": [
       "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
     ]
@@ -47,6 +47,46 @@
     "text": "Knuth, Donald E. 1984. “Literate Programming.” Comput.\nJ. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97.",
     "crumbs": [
       "References"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#random-forest",
+    "href": "01-performance-measures.html#random-forest",
+    "title": "2  Measures of model performance",
+    "section": "",
+    "text": "Note. Random Forest can be applied to both classification and regression tasks.\nIn this chapter, we focus only on the classification setting, where the target variable \\(y_i \\in \\{0,1\\}\\) and each tree outputs class probabilities. The formulas and evaluation metrics described below are all for classification.\n\n\n\n\n\n2.1.1 Bootstrap sampling\nDraw a bootstrap sample \\(D_b^*\\) from \\(D\\) by sampling \\(N\\) observations with replacement.\n\\[\nD_b^* = \\{(x_{i_1},y_{i_1}),\\dots,(x_{i_N},y_{i_N})\\},\\quad i_j \\sim \\text{Unif}\\{1,\\dots,N\\}.\n\\]\n\n\n2.1.2 Random feature selection\nAt each internal node, randomly select \\(m_{\\text{try}}\\) features from the full set \\(\\{1,\\dots,p\\}\\).\nAmong the possible splits on these features, choose the one that maximizes the impurity decrease:\n\\[\n\\Delta \\mathcal{I}\n= \\mathcal{I}(\\text{parent})\n-\\sum_{c\\in\\{\\text{left},\\text{right}\\}}\n\\frac{n_c}{n_{\\text{parent}}}\\mathcal{I}(c).\n\\]\nA common impurity measure is the Gini impurity:\n\\[\n\\mathcal{I}_{\\text{Gini}}(\\text{node}) = 1 - \\sum_{k\\in\\{0,1\\}}\\hat{\\pi}_k^2,\n\\qquad\n\\hat{\\pi}_k = \\frac{1}{n_{\\text{node}}}\\sum_{i\\in\\text{node}}\\mathbb{1}(y_i=k).\n\\]\n\n\n2.1.3 Prediction\nEach tree \\(T_b\\) produces a probability estimate for the positive class:\n\\[\nT_b(x) = \\hat{p}_b(y=1\\mid x).\n\\]\nThe Random Forest averages these:\n\\[\n\\hat{p}(x) = \\frac{1}{B}\\sum_{b=1}^B T_b(x),\n\\qquad\n\\hat{y}(x) = \\mathbb{1}\\{\\hat{p}(x) \\ge 0.5\\}.\n\\]\nThis reduces variance and improves generalization.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#ten-fold-cross-validation",
+    "href": "01-performance-measures.html#ten-fold-cross-validation",
+    "title": "2  Measures of model performance",
+    "section": "2.2 Ten-Fold Cross-Validation",
+    "text": "2.2 Ten-Fold Cross-Validation\nWe split \\(D\\) into 10 disjoint folds of (approximately) equal size:\n\\[\nD = \\bigcup_{k=1}^{10} D_k,\\qquad D_i\\cap D_j = \\varnothing \\ (i\\neq j).\n\\]\nFor each fold \\(k\\):\n\nTraining set: \\(D^{(-k)} = D \\setminus D_k\\)\n\nTest set: \\(D_k\\)\n\nTrain the Random Forest on \\(D^{(-k)}\\) to obtain a fitted model \\(f_k(\\cdot)\\).\nUse it to produce predictions on all samples in \\(D_k\\):\n\\[\n\\{(\\hat{p}_k(x_i),\\hat{y}_k(x_i),y_i)\\}_{(x_i,y_i)\\in D_k}.\n\\]\nLet \\(M(\\cdot)\\) be a performance metric (Accuracy, F1, etc).\nDefine the fold-wise performance as\n\\[\nM_k = M\\big(\\{(\\hat{y}_k(x_i),y_i)\\}_{(x_i,y_i)\\in D_k}\\big).\n\\]\nThe cross-validated estimate is\n\\[\n\\overline{M} = \\frac{1}{10}\\sum_{k=1}^{10} M_k.\n\\]\n\n2.2.1 Standard error of the 10-fold CV mean (derivation)\nLet \\(M_1,\\dots,M_n\\) be the performance values (e.g., accuracy, F1, AUC, or MSE) computed on each of the \\(n\\) CV folds. For 10-fold CV, \\(n=10\\).\nStep 1 (fold mean).\nDefine the mean across folds \\[\n\\overline{M} \\;=\\; \\frac{1}{n}\\sum_{k=1}^n M_k \\, .\n\\]\nStep 2 (sample variance across folds).\nUse the unbiased sample variance with Bessel’s correction \\[\ns^2 \\;=\\; \\frac{1}{n-1}\\sum_{k=1}^n \\big(M_k-\\overline{M}\\big)^2 \\, .\n\\]\nStep 3 (standard error of the mean).\nThe standard error of the mean is the standard deviation of \\(\\overline{M}\\).\nWe estimate it by plugging in the sample standard deviation \\(s\\): \\[\n\\widehat{\\mathrm{SE}}(\\overline{M}) \\;=\\; \\frac{s}{\\sqrt{n}}\n\\;=\\; \\sqrt{\\frac{s^2}{n}} \\, .\n\\]\nStep 4 (combine Steps 2 and 3).\nSubstitute \\(s^2\\) from Step 2: \\[\n\\widehat{\\mathrm{SE}}(\\overline{M})\n\\;=\\;\n\\sqrt{ \\frac{1}{n}\\cdot \\frac{1}{n-1} \\sum_{k=1}^n \\big(M_k-\\overline{M}\\big)^2 }\n\\;=\\;\n\\sqrt{ \\frac{1}{n(n-1)} \\sum_{k=1}^n \\big(M_k-\\overline{M}\\big)^2 } \\, .\n\\]\nFor 10-fold CV (\\(n=10\\)), \\[\n\\widehat{\\mathrm{SE}}(\\overline{M})\n\\;=\\;\n\\sqrt{ \\frac{1}{10(10-1)} \\sum_{k=1}^{10} \\big(M_k-\\overline{M}\\big)^2 } \\, .\n\\]",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#performance-metrics",
+    "href": "01-performance-measures.html#performance-metrics",
+    "title": "2  Measures of model performance",
+    "section": "2.3 Performance Metrics",
+    "text": "2.3 Performance Metrics\nOn a given test set, define confusion matrix counts:\n\\[\nTP=\\sum \\mathbb{1}\\{y_i=1,\\hat{y}_i=1\\},\\quad\nFP=\\sum \\mathbb{1}\\{y_i=0,\\hat{y}_i=1\\},\\quad\nTN=\\sum \\mathbb{1}\\{y_i=0,\\hat{y}_i=0\\},\\quad\nFN=\\sum \\mathbb{1}\\{y_i=1,\\hat{y}_i=0\\}.\n\\]\nThen:\n\\[\n\\mathrm{Accuracy}=\\frac{TP+TN}{TP+TN+FP+FN},\n\\qquad\n\\mathrm{Precision}=\\frac{TP}{TP+FP},\n\\qquad\n\\mathrm{Recall}=\\frac{TP}{TP+FN},\n\\]\n\\[\n\\mathrm{F1}=2\\frac{\\mathrm{Precision}\\cdot\\mathrm{Recall}}{\\mathrm{Precision}+\\mathrm{Recall}}.\n\\]\nAUC is the area under the ROC curve:\n\\[\n\\mathrm{AUC} = \\Pr(S^+ &gt; S^-)\n\\]\nwhere \\(S^+\\) and \\(S^-\\) are the scores from randomly drawn positive and negative examples.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#combining-rf-and-cv",
+    "href": "01-performance-measures.html#combining-rf-and-cv",
+    "title": "2  Measures of model performance",
+    "section": "2.4 Combining RF and CV",
+    "text": "2.4 Combining RF and CV\nFor each fold \\(k\\), compute the metrics on the test set \\(D_k\\).\nFor example, cross-validated accuracy is\n\\[\n\\overline{\\mathrm{Acc}} = \\frac{1}{10}\\sum_{k=1}^{10}\n\\frac{TP_k+TN_k}{TP_k+TN_k+FP_k+FN_k}.\n\\]\nDo the same for Precision, Recall, F1, and AUC.\nThese \\(\\overline{M}\\) values represent the estimated generalization performance of the Random Forest model.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
     ]
   }
 ]
