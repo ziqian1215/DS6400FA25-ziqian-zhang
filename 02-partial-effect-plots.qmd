@@ -1,0 +1,108 @@
+# Model Visualization
+
+## Data Generation
+
+We generate data from the model:
+
+$$
+E[Y \mid X] = \sqrt{5}\,\sigma(X_1 + X_3) + \sqrt{5}\,\sigma(X_2)\,X_3, \quad
+V[Y \mid X]=1,
+$$
+
+where $X_1,X_2 \sim \mathcal N(0,1)$, $X_3 \sim \text{Bernoulli}(0.4)$, and $\sigma(x)=1/(1+e^{-x})$.
+
+```{r}
+#| message: false
+#| warning: false
+library(tidyverse)
+
+set.seed(42)
+n  <- 2000
+X1 <- rnorm(n)
+X2 <- rnorm(n)
+X3 <- rbinom(n, 1, 0.4)
+
+sigmoid <- function(x) 1 / (1 + exp(-x))
+mu <- sqrt(5) * sigmoid(X1 + X3) + sqrt(5) * sigmoid(X2) * X3
+Y  <- mu + rnorm(n, 0, 1)
+
+dat <- tibble(X1, X2, X3 = factor(X3), Y)
+head(dat)
+```
+## Model: Linear Regression with Natural Splines
+
+We model a flexible, nonlinear relationship by replacing raw predictors with **natural cubic spline** bases.  
+Let $f_1(\cdot)$ and $f_2(\cdot)$ be smooth functions represented by spline bases. We fit
+
+$$
+Y \;=\; \beta_0 \;+\; f_1(X_1)\;+\; \big[f_2(X_2)\times \mathbb{1}(X_3)\big]\;+\; \gamma\,\mathbb{1}(X_3)\;+\; \varepsilon,
+\quad \varepsilon \sim \mathcal{N}(0,\sigma^2).
+$$
+
+- `ns(X1, df=5)` and `ns(X2, df=5)` are **natural spline** bases with 5 degrees of freedom.  
+- The interaction `ns(X2, 5) * X3` lets the **shape of the X2 effect differ by X3** (matches the DGP where the X2 effect turns on when $X_3=1$).
+
+```{r}
+library(splines)
+
+lm_spline <- lm(
+  Y ~ ns(X1, df = 5) + ns(X2, df = 5) * X3,
+  data = dat
+)
+```
+## Partial Effect Plots
+
+**What is a partial effect plot?**  
+For an `lm` with splines, a partial effect (component-plus-residual) plot shows how a predictor contributes to the fitted values **after adjusting for all other terms**. We compute the **term contribution** for a variable (from `predict(mod, type = "terms")`), add the model residuals to form **partial residuals**, and plot those against the raw predictor. A smooth (LOESS) curve with a confidence band visualizes the nonlinear effect learned by the spline.
+
+### Helper functions
+
+The two helpers below produce ggplot figures:
+- `simple_peplot()` — single numeric predictor
+- `simple_peplot_by()` — numeric predictor split into separate curves by a factor (e.g., `X3`)
+
+```{r}
+simple_peplot <- function(mod, var, data, span = 0.8) {
+  tt <- predict(mod, type = "terms")
+  cn <- colnames(tt)
+  pick <- grep(paste0("\\b", var, "\\b"), cn)
+  if (length(pick) == 0L) stop("No model terms matched '", var, "'.")
+  term_contrib <- rowSums(tt[, pick, drop = FALSE])
+  pr <- term_contrib + residuals(mod)
+  x  <- data[[var]]
+
+  ggplot(tibble(x = x, pr = pr), aes(x, pr)) +
+    geom_point(alpha = 0.35, size = 1, color = "steelblue") +
+    geom_smooth(method = "loess", span = span, se = TRUE, linewidth = 1.1) +
+    labs(x = var, y = "Partial residual", title = paste("Partial effect of", var)) +
+    theme_bw(base_size = 12)
+}
+
+simple_peplot_by <- function(mod, var, by, data, span = 0.8) {
+  tt <- predict(mod, type = "terms")
+  pick <- grep(paste0("\\b", var, "\\b"), colnames(tt))
+  stopifnot(length(pick) > 0)
+  term_contrib <- rowSums(tt[, pick, drop = FALSE])
+  pr <- term_contrib + residuals(mod)
+
+  df <- tibble(x = data[[var]], pr = pr, grp = data[[by]])
+
+  ggplot(df, aes(x, pr, color = grp)) +
+    geom_point(alpha = 0.3, size = 1) +
+    geom_smooth(method = "loess", span = span, se = TRUE, linewidth = 1.1) +
+    labs(x = var, y = "Partial residual",
+         title = paste("Partial effect of", var, "by", by), color = by) +
+    theme_bw(base_size = 12)
+}
+```
+## Final Plots
+
+Now we put everything together: plotting the **partial effects** of our spline-based linear regression.
+```{r}
+#| message: false
+#| warning: false
+simple_peplot(lm_spline, "X1", data = dat)
+simple_peplot(lm_spline, "X2", data = dat)
+simple_peplot_by(lm_spline, var = "X1", by = "X3", data = dat)
+simple_peplot_by(lm_spline, var = "X2", by = "X3", data = dat)
+```

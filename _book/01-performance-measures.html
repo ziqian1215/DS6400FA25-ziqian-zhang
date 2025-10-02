@@ -20,6 +20,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -30,7 +65,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./summary.html" rel="next">
+<link href="./02-partial-effect-plots.html" rel="next">
 <link href="./intro.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
@@ -159,8 +194,14 @@ window.Quarto = {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./02-partial-effect-plots.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">This is the title of the chapter</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./summary.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Summary</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -191,6 +232,23 @@ window.Quarto = {
   </ul></li>
   <li><a href="#performance-metrics" id="toc-performance-metrics" class="nav-link" data-scroll-target="#performance-metrics"><span class="header-section-number">2.3</span> Performance Metrics</a></li>
   <li><a href="#combining-rf-and-cv" id="toc-combining-rf-and-cv" class="nav-link" data-scroll-target="#combining-rf-and-cv"><span class="header-section-number">2.4</span> Combining RF and CV</a></li>
+  <li><a href="#simulation-study" id="toc-simulation-study" class="nav-link" data-scroll-target="#simulation-study"><span class="header-section-number">2.5</span> Simulation study</a></li>
+  <li><a href="#data-generation-model" id="toc-data-generation-model" class="nav-link" data-scroll-target="#data-generation-model"><span class="header-section-number">2.6</span> Data generation model</a>
+  <ul class="collapse">
+  <li><a href="#r-implementation-of-data-generation" id="toc-r-implementation-of-data-generation" class="nav-link" data-scroll-target="#r-implementation-of-data-generation"><span class="header-section-number">2.6.1</span> R implementation of data generation</a></li>
+  </ul></li>
+  <li><a href="#methods-evaluated" id="toc-methods-evaluated" class="nav-link" data-scroll-target="#methods-evaluated"><span class="header-section-number">2.7</span> Methods evaluated</a>
+  <ul class="collapse">
+  <li><a href="#libraries" id="toc-libraries" class="nav-link" data-scroll-target="#libraries"><span class="header-section-number">2.7.1</span> Libraries</a></li>
+  <li><a href="#stratified-folds-model-wrappers-and-error-computation" id="toc-stratified-folds-model-wrappers-and-error-computation" class="nav-link" data-scroll-target="#stratified-folds-model-wrappers-and-error-computation"><span class="header-section-number">2.7.2</span> Stratified folds, model wrappers, and error computation</a></li>
+  <li><a href="#cross-validation-evaluators" id="toc-cross-validation-evaluators" class="nav-link" data-scroll-target="#cross-validation-evaluators"><span class="header-section-number">2.7.3</span> Cross-validation evaluators</a></li>
+  </ul></li>
+  <li><a href="#true-error-and-monte-carlo-evaluation" id="toc-true-error-and-monte-carlo-evaluation" class="nav-link" data-scroll-target="#true-error-and-monte-carlo-evaluation"><span class="header-section-number">2.8</span> True error and Monte Carlo evaluation</a>
+  <ul class="collapse">
+  <li><a href="#function-to-estimate-true-error" id="toc-function-to-estimate-true-error" class="nav-link" data-scroll-target="#function-to-estimate-true-error"><span class="header-section-number">2.8.1</span> Function to estimate true error</a></li>
+  </ul></li>
+  <li><a href="#simulation-setup" id="toc-simulation-setup" class="nav-link" data-scroll-target="#simulation-setup"><span class="header-section-number">2.9</span> Simulation Setup</a></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary"><span class="header-section-number">2.10</span> Summary</a></li>
   </ul>
 </nav>
     </div>
@@ -264,7 +322,6 @@ T_b(x) = \hat{p}_b(y=1\mid x).
 \hat{y}(x) = \mathbb{1}\{\hat{p}(x) \ge 0.5\}.
 \]</span></p>
 <p>This reduces variance and improves generalization.</p>
-<hr>
 </section>
 </section>
 <section id="ten-fold-cross-validation" class="level2" data-number="2.2">
@@ -363,6 +420,265 @@ For example, cross-validated accuracy is</p>
 \]</span></p>
 <p>Do the same for Precision, Recall, F1, and AUC.<br>
 These <span class="math inline">\(\overline{M}\)</span> values represent the estimated generalization performance of the Random Forest model.</p>
+</section>
+<section id="simulation-study" class="level2" data-number="2.5">
+<h2 data-number="2.5" class="anchored" data-anchor-id="simulation-study"><span class="header-section-number">2.5</span> Simulation study</h2>
+<p>The following part shows the simulation study comparing LOO vs 10-fold CV for LDA &amp; Random Forest.</p>
+</section>
+<section id="data-generation-model" class="level2" data-number="2.6">
+<h2 data-number="2.6" class="anchored" data-anchor-id="data-generation-model"><span class="header-section-number">2.6</span> Data generation model</h2>
+<p>We simulate i.i.d. data <span class="math inline">\(\{(\mathbf{T}_i, Y_i)\}_{i=1}^n\)</span> as:</p>
+<p><span class="math display">\[
+Y_i \sim \mathrm{Bin}(1, 0.5), \qquad
+\mathbf{T}_i \mid Y_i = y_i \;\sim\; N_2\!\left(
+\begin{bmatrix}
+y_i - \tfrac{1}{2} \\
+0
+\end{bmatrix},
+\, I_2
+\right),
+\]</span></p>
+<p>where <span class="math inline">\(I_2\)</span> is the <span class="math inline">\(2\times2\)</span> identity and <span class="math inline">\(N_2\)</span> denotes the bivariate normal. Equivalently, conditional on <span class="math inline">\(Y_i\)</span>, the two features are independent with unit variance;<br>
+the first feature’s mean shifts by <span class="math inline">\(y_i-0.5\)</span>, making it informative for <span class="math inline">\(Y\)</span>.</p>
+<section id="r-implementation-of-data-generation" class="level3" data-number="2.6.1">
+<h3 data-number="2.6.1" class="anchored" data-anchor-id="r-implementation-of-data-generation"><span class="header-section-number">2.6.1</span> R implementation of data generation</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data generation function</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>generate_data <span class="ot">&lt;-</span> <span class="cf">function</span>(N, <span class="at">seed =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(seed)) <span class="fu">set.seed</span>(seed)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  y  <span class="ot">&lt;-</span> <span class="fu">rbinom</span>(N, <span class="at">size =</span> <span class="dv">1</span>, <span class="at">prob =</span> <span class="fl">0.5</span>)                 <span class="co"># Bernoulli(0.5)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  x1 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(N, <span class="at">mean =</span> y <span class="sc">-</span> <span class="fl">0.5</span>, <span class="at">sd =</span> <span class="dv">1</span>)                <span class="co"># mean depends on y</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  x2 <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(N, <span class="at">mean =</span> <span class="dv">0</span>,       <span class="at">sd =</span> <span class="dv">1</span>)                <span class="co"># mean 0, unit sd</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>(</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">x1 =</span> x1,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">x2 =</span> x2,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">y  =</span> <span class="fu">factor</span>(y, <span class="at">levels =</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">1</span>))</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="methods-evaluated" class="level2" data-number="2.7">
+<h2 data-number="2.7" class="anchored" data-anchor-id="methods-evaluated"><span class="header-section-number">2.7</span> Methods evaluated</h2>
+<p>We evaluate two classifiers:</p>
+<ul>
+<li><strong>Linear Discriminant Analysis (LDA)</strong></li>
+<li><strong>Random Forest (RF)</strong></li>
+</ul>
+<p>Each model’s <strong>generalization error</strong> is estimated using two cross-validation approaches:</p>
+<ul>
+<li><p><strong>Leave-one-out cross-validation (LOO-CV):</strong><br>
+<span class="math display">\[
+\widehat{R}_{\text{LOO}} = \frac{1}{n} \sum_{i=1}^n \ell(y_i, \widehat{f}^{(-i)}(x_i)),
+\]</span> where <span class="math inline">\(\widehat{f}^{(-i)}\)</span> is trained without observation <span class="math inline">\(i\)</span>.</p></li>
+<li><p><strong>10-fold cross-validation:</strong><br>
+<span class="math display">\[
+\widehat{R}_{10\text{-fold}} =
+\frac{1}{10}\sum_{k=1}^{10}\frac{1}{|\mathcal{I}_k|}\sum_{i\in\mathcal{I}_k} \ell(y_i,\widehat{f}^{(-k)}(x_i)),
+\]</span> where folds <span class="math inline">\(\mathcal{I}_1,\dots,\mathcal{I}_{10}\)</span> partition the sample.</p></li>
+</ul>
+<p>The loss function <span class="math inline">\(\ell\)</span> is <strong>0–1 loss</strong> (misclassification error).<br>
+We then compare each estimator to the <strong>true error</strong> (approximated using a very large independent test set) and summarize performance using:</p>
+<ul>
+<li><strong>Bias:</strong> mean difference between estimated CV error and true error.<br>
+</li>
+<li><strong>Variance:</strong> variability of CV estimates across Monte Carlo replications.<br>
+</li>
+<li><strong>MSE:</strong> mean squared error, decomposed as<br>
+<span class="math display">\[
+\text{MSE} = (\text{Bias})^2 + \text{Variance}.
+\]</span></li>
+</ul>
+<section id="libraries" class="level3" data-number="2.7.1">
+<h3 data-number="2.7.1" class="anchored" data-anchor-id="libraries"><span class="header-section-number">2.7.1</span> Libraries</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressPackageStartupMessages</span>({</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(MASS)          <span class="co"># for LDA</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(randomForest)  <span class="co"># for Random Forest</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(dplyr)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(tibble)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(purrr)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">library</span>(ggplot2)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="stratified-folds-model-wrappers-and-error-computation" class="level3" data-number="2.7.2">
+<h3 data-number="2.7.2" class="anchored" data-anchor-id="stratified-folds-model-wrappers-and-error-computation"><span class="header-section-number">2.7.2</span> Stratified folds, model wrappers, and error computation</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>make_stratified_folds <span class="ot">&lt;-</span> <span class="cf">function</span>(y, <span class="at">K =</span> <span class="dv">10</span>, <span class="at">seed =</span> <span class="dv">1</span>) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(seed)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> <span class="fu">factor</span>(y, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0"</span>,<span class="st">"1"</span>))</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  folds <span class="ot">&lt;-</span> <span class="fu">integer</span>(<span class="fu">length</span>(y))</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (lvl <span class="cf">in</span> <span class="fu">levels</span>(y)) {</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">which</span>(y <span class="sc">==</span> lvl)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(idx)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    splits <span class="ot">&lt;-</span> <span class="fu">cut</span>(<span class="fu">seq_along</span>(idx), <span class="at">breaks =</span> K, <span class="at">labels =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    folds[idx] <span class="ot">&lt;-</span> splits</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  folds</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>predict_model <span class="ot">&lt;-</span> <span class="cf">function</span>(model_type, train_df, test_df, <span class="at">y_col =</span> <span class="st">"y"</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>                          <span class="at">rf_ntree =</span> <span class="dv">500</span>, <span class="at">rf_mtry =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.factor</span>(train_df[[y_col]])) train_df[[y_col]] <span class="ot">&lt;-</span> <span class="fu">factor</span>(train_df[[y_col]], <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0"</span>,<span class="st">"1"</span>))</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.factor</span>(test_df[[y_col]]))  test_df[[y_col]]  <span class="ot">&lt;-</span> <span class="fu">factor</span>(test_df[[y_col]],  <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0"</span>,<span class="st">"1"</span>))</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (model_type <span class="sc">==</span> <span class="st">"lda"</span>) {</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    fit <span class="ot">&lt;-</span> MASS<span class="sc">::</span><span class="fu">lda</span>(<span class="fu">as.formula</span>(<span class="fu">paste</span>(y_col, <span class="st">"~ ."</span>)), <span class="at">data =</span> train_df)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    post <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, <span class="at">newdata =</span> test_df)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    pred <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">ifelse</span>(post<span class="sc">$</span>posterior[, <span class="st">"1"</span>] <span class="sc">&gt;=</span> <span class="fl">0.5</span>, <span class="st">"1"</span>, <span class="st">"0"</span>), <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"0"</span>,<span class="st">"1"</span>))</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (model_type <span class="sc">==</span> <span class="st">"rf"</span>) {</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">is.null</span>(rf_mtry)) rf_mtry <span class="ot">&lt;-</span> <span class="fu">floor</span>(<span class="fu">sqrt</span>(<span class="fu">ncol</span>(train_df) <span class="sc">-</span> <span class="dv">1</span>))</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    fit <span class="ot">&lt;-</span> randomForest<span class="sc">::</span><span class="fu">randomForest</span>(<span class="fu">as.formula</span>(<span class="fu">paste</span>(y_col, <span class="st">"~ ."</span>)),</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>                                      <span class="at">data =</span> train_df, <span class="at">ntree =</span> rf_ntree, <span class="at">mtry =</span> rf_mtry)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, <span class="at">newdata =</span> test_df, <span class="at">type =</span> <span class="st">"response"</span>)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>  } <span class="cf">else</span> <span class="fu">stop</span>(<span class="st">"Unknown model_type"</span>)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>  pred</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>compute_error <span class="ot">&lt;-</span> <span class="cf">function</span>(y_true, pred) {</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mean</span>(pred <span class="sc">!=</span> y_true)</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="cross-validation-evaluators" class="level3" data-number="2.7.3">
+<h3 data-number="2.7.3" class="anchored" data-anchor-id="cross-validation-evaluators"><span class="header-section-number">2.7.3</span> Cross-validation evaluators</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>evaluate_loo <span class="ot">&lt;-</span> <span class="cf">function</span>(df, model_type, <span class="at">rf_ntree =</span> <span class="dv">500</span>, <span class="at">rf_mtry =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(df)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  errs <span class="ot">&lt;-</span> <span class="fu">numeric</span>(n)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_len</span>(n)) {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    test_idx  <span class="ot">&lt;-</span> i</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    train_idx <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">seq_len</span>(n), i)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    train_df  <span class="ot">&lt;-</span> df[train_idx, , drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    test_df   <span class="ot">&lt;-</span> df[test_idx,  , drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    pred <span class="ot">&lt;-</span> <span class="fu">predict_model</span>(model_type, train_df, test_df, <span class="at">rf_ntree =</span> rf_ntree, <span class="at">rf_mtry =</span> rf_mtry)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    errs[i] <span class="ot">&lt;-</span> <span class="fu">compute_error</span>(test_df<span class="sc">$</span>y, pred)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mean</span>(errs)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>evaluate_kfold <span class="ot">&lt;-</span> <span class="cf">function</span>(df, model_type, <span class="at">K =</span> <span class="dv">10</span>, <span class="at">seed =</span> <span class="dv">1</span>, <span class="at">rf_ntree =</span> <span class="dv">500</span>, <span class="at">rf_mtry =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  folds <span class="ot">&lt;-</span> <span class="fu">make_stratified_folds</span>(df<span class="sc">$</span>y, <span class="at">K =</span> K, <span class="at">seed =</span> seed)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  errs <span class="ot">&lt;-</span> <span class="fu">numeric</span>(K)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">seq_len</span>(K)) {</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    test_idx  <span class="ot">&lt;-</span> <span class="fu">which</span>(folds <span class="sc">==</span> k)</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    train_idx <span class="ot">&lt;-</span> <span class="fu">which</span>(folds <span class="sc">!=</span> k)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    train_df  <span class="ot">&lt;-</span> df[train_idx, , drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    test_df   <span class="ot">&lt;-</span> df[test_idx,  , drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>    pred <span class="ot">&lt;-</span> <span class="fu">predict_model</span>(model_type, train_df, test_df, <span class="at">rf_ntree =</span> rf_ntree, <span class="at">rf_mtry =</span> rf_mtry)</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>    errs[k] <span class="ot">&lt;-</span> <span class="fu">compute_error</span>(test_df<span class="sc">$</span>y, pred)</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mean</span>(errs)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="true-error-and-monte-carlo-evaluation" class="level2" data-number="2.8">
+<h2 data-number="2.8" class="anchored" data-anchor-id="true-error-and-monte-carlo-evaluation"><span class="header-section-number">2.8</span> True error and Monte Carlo evaluation</h2>
+<p>To evaluate the accuracy of cross-validation estimators, we need a benchmark:<br>
+the <strong>true generalization error</strong> of each model.</p>
+<p>For a fitted classifier <span class="math inline">\(f\)</span>, the true error is defined as <span class="math display">\[
+R(f) = \Pr\{ f(\mathbf{X}) \neq Y \},
+\]</span> where <span class="math inline">\((\mathbf{X}, Y)\)</span> is a new independent draw from the same distribution.</p>
+<p>Since this probability cannot be computed exactly, we approximate it using a <strong>very large independent test set</strong> (e.g., <span class="math inline">\(N_\text{test} = 50{,}000\)</span>).<br>
+We train the model on the entire observed dataset, then evaluate its misclassification rate on the test set.</p>
+<hr>
+<section id="function-to-estimate-true-error" class="level3" data-number="2.8.1">
+<h3 data-number="2.8.1" class="anchored" data-anchor-id="function-to-estimate-true-error"><span class="header-section-number">2.8.1</span> Function to estimate true error</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>estimate_true_error <span class="ot">&lt;-</span> <span class="cf">function</span>(model_type, train_df, <span class="at">N_test =</span> <span class="dv">50000</span>,</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                                <span class="at">rf_ntree =</span> <span class="dv">500</span>, <span class="at">rf_mtry =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Generate large independent test set</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  test_df <span class="ot">&lt;-</span> <span class="fu">generate_data</span>(N_test)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  pred <span class="ot">&lt;-</span> <span class="fu">predict_model</span>(model_type, train_df, test_df, <span class="at">rf_ntree =</span> rf_ntree, <span class="at">rf_mtry =</span> rf_mtry)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">compute_error</span>(test_df<span class="sc">$</span>y, pred)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>one_replication <span class="ot">&lt;-</span> <span class="cf">function</span>(N, <span class="at">seed =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(seed)) <span class="fu">set.seed</span>(seed)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">generate_data</span>(N)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># LDA</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  lda_loo   <span class="ot">&lt;-</span> <span class="fu">evaluate_loo</span>(df, <span class="st">"lda"</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  lda_k10   <span class="ot">&lt;-</span> <span class="fu">evaluate_kfold</span>(df, <span class="st">"lda"</span>, <span class="at">K =</span> <span class="dv">10</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  lda_true  <span class="ot">&lt;-</span> <span class="fu">estimate_true_error</span>(<span class="st">"lda"</span>, df)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># RF</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  rf_loo    <span class="ot">&lt;-</span> <span class="fu">evaluate_loo</span>(df, <span class="st">"rf"</span>)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  rf_k10    <span class="ot">&lt;-</span> <span class="fu">evaluate_kfold</span>(df, <span class="st">"rf"</span>, <span class="at">K =</span> <span class="dv">10</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  rf_true   <span class="ot">&lt;-</span> <span class="fu">estimate_true_error</span>(<span class="st">"rf"</span>, df)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">N        =</span> N,</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">model    =</span> <span class="fu">c</span>(<span class="st">"LDA"</span>,<span class="st">"LDA"</span>,<span class="st">"RF"</span>,<span class="st">"RF"</span>),</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">method   =</span> <span class="fu">c</span>(<span class="st">"LOO"</span>,<span class="st">"10-fold"</span>,<span class="st">"LOO"</span>,<span class="st">"10-fold"</span>),</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">est_err  =</span> <span class="fu">c</span>(lda_loo, lda_k10, rf_loo, rf_k10),</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">true_err =</span> <span class="fu">c</span>(lda_true, lda_true, rf_true, rf_true)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">20250925</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">one_replication</span>(<span class="dv">40</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 5
+      N model method  est_err true_err
+  &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+1    40 LDA   LOO       0.325    0.323
+2    40 LDA   10-fold   0.285    0.323
+3    40 RF    LOO       0.425    0.333
+4    40 RF    10-fold   0.38     0.333</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="simulation-setup" class="level2" data-number="2.9">
+<h2 data-number="2.9" class="anchored" data-anchor-id="simulation-setup"><span class="header-section-number">2.9</span> Simulation Setup</h2>
+<p>The code below runs a Monte Carlo simulation across multiple sample sizes. It defines a set of sample sizes (<code>Ns</code>) and the number of replications (<code>R=20</code>) to run for each, sets a random seed for reproducibility, and initializes an empty list to store results. For each sample size (N) and replication (r), the function <code>one_replication(N)</code> is called to perform a single experiment, the output is tagged with the replication index, and then appended to the results list. In the end, <code>results_list</code> contains all simulated outcomes across every combination of sample size and replication, providing the data needed for further summarization and analysis.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>Ns <span class="ot">&lt;-</span> <span class="fu">c</span>( <span class="dv">20</span>, <span class="dv">30</span>, <span class="dv">40</span>, <span class="dv">50</span>, <span class="dv">75</span>, <span class="dv">100</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>R  <span class="ot">&lt;-</span> <span class="dv">20</span>  <span class="co"># increase for tighter Monte Carlo precision</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>results_list <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (N <span class="cf">in</span> Ns) {</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (r <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>R) {</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    res <span class="ot">&lt;-</span> <span class="fu">one_replication</span>(N)</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    res<span class="sc">$</span>rep <span class="ot">&lt;-</span> r</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    results_list <span class="ot">&lt;-</span> <span class="fu">append</span>(results_list, <span class="fu">list</span>(res))</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="summary" class="level2" data-number="2.10">
+<h2 data-number="2.10" class="anchored" data-anchor-id="summary"><span class="header-section-number">2.10</span> Summary</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>results <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(results_list)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(results, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">factor</span>(N), <span class="at">y =</span> est_err, <span class="at">color =</span> method)) <span class="sc">+</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="at">outlier.alpha =</span> <span class="fl">0.3</span>, <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.8</span>)) <span class="sc">+</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_summary</span>(<span class="at">fun =</span> mean, <span class="at">geom =</span> <span class="st">"line"</span>, <span class="fu">aes</span>(<span class="at">group =</span> method),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>               <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.8</span>)) <span class="sc">+</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_summary</span>(<span class="at">fun =</span> mean, <span class="at">geom =</span> <span class="st">"point"</span>, <span class="fu">aes</span>(<span class="at">group =</span> method),</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>               <span class="at">position =</span> <span class="fu">position_dodge</span>(<span class="at">width =</span> <span class="fl">0.8</span>), <span class="at">size =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> model) <span class="sc">+</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Distribution of CV Estimates vs. True Error"</span>,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Sample size N"</span>,</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Estimated error rate"</span>,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"CV Method"</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">12</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="01-performance-measures_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
 
 
 </section>
@@ -775,8 +1091,8 @@ These <span class="math inline">\(\overline{M}\)</span> values represent the est
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./summary.html" class="pagination-link" aria-label="Summary">
-        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Summary</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./02-partial-effect-plots.html" class="pagination-link" aria-label="This is the title of the chapter">
+        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">This is the title of the chapter</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

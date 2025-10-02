@@ -88,5 +88,105 @@
     "crumbs": [
       "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
     ]
+  },
+  {
+    "objectID": "02-partial-effect-plots.html",
+    "href": "02-partial-effect-plots.html",
+    "title": "3  Model Visualization",
+    "section": "",
+    "text": "3.1 Data Generation\nWe generate data from the model:\n\\[\nE[Y \\mid X] = \\sqrt{5}\\,\\sigma(X_1 + X_3) + \\sqrt{5}\\,\\sigma(X_2)\\,X_3, \\quad\nV[Y \\mid X]=1,\n\\]\nwhere \\(X_1,X_2 \\sim \\mathcal N(0,1)\\), \\(X_3 \\sim \\text{Bernoulli}(0.4)\\), and \\(\\sigma(x)=1/(1+e^{-x})\\).\nlibrary(tidyverse)\n\nset.seed(42)\nn  &lt;- 2000\nX1 &lt;- rnorm(n)\nX2 &lt;- rnorm(n)\nX3 &lt;- rbinom(n, 1, 0.4)\n\nsigmoid &lt;- function(x) 1 / (1 + exp(-x))\nmu &lt;- sqrt(5) * sigmoid(X1 + X3) + sqrt(5) * sigmoid(X2) * X3\nY  &lt;- mu + rnorm(n, 0, 1)\n\ndat &lt;- tibble(X1, X2, X3 = factor(X3), Y)\nhead(dat)\n\n# A tibble: 6 × 4\n      X1     X2 X3        Y\n   &lt;dbl&gt;  &lt;dbl&gt; &lt;fct&gt; &lt;dbl&gt;\n1  1.37   0.251 0      1.85\n2 -0.565 -0.278 0      1.78\n3  0.363 -1.72  0      1.63\n4  0.633 -2.01  0      1.32\n5  0.404 -1.29  0      1.01\n6 -0.106  0.366 1      2.79",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Model Visualization</span>"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#simulation-study",
+    "href": "01-performance-measures.html#simulation-study",
+    "title": "2  Measures of model performance",
+    "section": "2.5 Simulation study",
+    "text": "2.5 Simulation study\nThe following part shows the simulation study comparing LOO vs 10-fold CV for LDA & Random Forest.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#data-generation-model",
+    "href": "01-performance-measures.html#data-generation-model",
+    "title": "2  Measures of model performance",
+    "section": "2.6 Data generation model",
+    "text": "2.6 Data generation model\nWe simulate i.i.d. data \\(\\{(\\mathbf{T}_i, Y_i)\\}_{i=1}^n\\) as:\n\\[\nY_i \\sim \\mathrm{Bin}(1, 0.5), \\qquad\n\\mathbf{T}_i \\mid Y_i = y_i \\;\\sim\\; N_2\\!\\left(\n\\begin{bmatrix}\ny_i - \\tfrac{1}{2} \\\\\n0\n\\end{bmatrix},\n\\, I_2\n\\right),\n\\]\nwhere \\(I_2\\) is the \\(2\\times2\\) identity and \\(N_2\\) denotes the bivariate normal. Equivalently, conditional on \\(Y_i\\), the two features are independent with unit variance;\nthe first feature’s mean shifts by \\(y_i-0.5\\), making it informative for \\(Y\\).\n\n2.6.1 R implementation of data generation\n\n# Data generation function\ngenerate_data &lt;- function(N, seed = NULL) {\n  if (!is.null(seed)) set.seed(seed)\n  y  &lt;- rbinom(N, size = 1, prob = 0.5)                 # Bernoulli(0.5)\n  x1 &lt;- rnorm(N, mean = y - 0.5, sd = 1)                # mean depends on y\n  x2 &lt;- rnorm(N, mean = 0,       sd = 1)                # mean 0, unit sd\n  data.frame(\n    x1 = x1,\n    x2 = x2,\n    y  = factor(y, levels = c(0,1))\n  )\n}",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#methods-evaluated",
+    "href": "01-performance-measures.html#methods-evaluated",
+    "title": "2  Measures of model performance",
+    "section": "2.7 Methods evaluated",
+    "text": "2.7 Methods evaluated\nWe evaluate two classifiers:\n\nLinear Discriminant Analysis (LDA)\nRandom Forest (RF)\n\nEach model’s generalization error is estimated using two cross-validation approaches:\n\nLeave-one-out cross-validation (LOO-CV):\n\\[\n\\widehat{R}_{\\text{LOO}} = \\frac{1}{n} \\sum_{i=1}^n \\ell(y_i, \\widehat{f}^{(-i)}(x_i)),\n\\] where \\(\\widehat{f}^{(-i)}\\) is trained without observation \\(i\\).\n10-fold cross-validation:\n\\[\n\\widehat{R}_{10\\text{-fold}} =\n\\frac{1}{10}\\sum_{k=1}^{10}\\frac{1}{|\\mathcal{I}_k|}\\sum_{i\\in\\mathcal{I}_k} \\ell(y_i,\\widehat{f}^{(-k)}(x_i)),\n\\] where folds \\(\\mathcal{I}_1,\\dots,\\mathcal{I}_{10}\\) partition the sample.\n\nThe loss function \\(\\ell\\) is 0–1 loss (misclassification error).\nWe then compare each estimator to the true error (approximated using a very large independent test set) and summarize performance using:\n\nBias: mean difference between estimated CV error and true error.\n\nVariance: variability of CV estimates across Monte Carlo replications.\n\nMSE: mean squared error, decomposed as\n\\[\n\\text{MSE} = (\\text{Bias})^2 + \\text{Variance}.\n\\]\n\n\n2.7.1 Libraries\n\nsuppressPackageStartupMessages({\n  library(MASS)          # for LDA\n  library(randomForest)  # for Random Forest\n  library(dplyr)\n  library(tibble)\n  library(purrr)\n  library(ggplot2)\n})\n\n\n\n2.7.2 Stratified folds, model wrappers, and error computation\n\nmake_stratified_folds &lt;- function(y, K = 10, seed = 1) {\n  set.seed(seed)\n  y &lt;- factor(y, levels = c(\"0\",\"1\"))\n  folds &lt;- integer(length(y))\n  for (lvl in levels(y)) {\n    idx &lt;- which(y == lvl)\n    idx &lt;- sample(idx)\n    splits &lt;- cut(seq_along(idx), breaks = K, labels = FALSE)\n    folds[idx] &lt;- splits\n  }\n  folds\n}\n\npredict_model &lt;- function(model_type, train_df, test_df, y_col = \"y\",\n                          rf_ntree = 500, rf_mtry = NULL) {\n  if (!is.factor(train_df[[y_col]])) train_df[[y_col]] &lt;- factor(train_df[[y_col]], levels = c(\"0\",\"1\"))\n  if (!is.factor(test_df[[y_col]]))  test_df[[y_col]]  &lt;- factor(test_df[[y_col]],  levels = c(\"0\",\"1\"))\n\n  if (model_type == \"lda\") {\n    fit &lt;- MASS::lda(as.formula(paste(y_col, \"~ .\")), data = train_df)\n    post &lt;- predict(fit, newdata = test_df)\n    pred &lt;- factor(ifelse(post$posterior[, \"1\"] &gt;= 0.5, \"1\", \"0\"), levels = c(\"0\",\"1\"))\n  } else if (model_type == \"rf\") {\n    if (is.null(rf_mtry)) rf_mtry &lt;- floor(sqrt(ncol(train_df) - 1))\n    fit &lt;- randomForest::randomForest(as.formula(paste(y_col, \"~ .\")),\n                                      data = train_df, ntree = rf_ntree, mtry = rf_mtry)\n    pred &lt;- predict(fit, newdata = test_df, type = \"response\")\n  } else stop(\"Unknown model_type\")\n\n  pred\n}\n\ncompute_error &lt;- function(y_true, pred) {\n  mean(pred != y_true)\n}\n\n\n\n2.7.3 Cross-validation evaluators\n\nevaluate_loo &lt;- function(df, model_type, rf_ntree = 500, rf_mtry = NULL) {\n  n &lt;- nrow(df)\n  errs &lt;- numeric(n)\n  for (i in seq_len(n)) {\n    test_idx  &lt;- i\n    train_idx &lt;- setdiff(seq_len(n), i)\n    train_df  &lt;- df[train_idx, , drop = FALSE]\n    test_df   &lt;- df[test_idx,  , drop = FALSE]\n    pred &lt;- predict_model(model_type, train_df, test_df, rf_ntree = rf_ntree, rf_mtry = rf_mtry)\n    errs[i] &lt;- compute_error(test_df$y, pred)\n  }\n  mean(errs)\n}\n\nevaluate_kfold &lt;- function(df, model_type, K = 10, seed = 1, rf_ntree = 500, rf_mtry = NULL) {\n  folds &lt;- make_stratified_folds(df$y, K = K, seed = seed)\n  errs &lt;- numeric(K)\n  for (k in seq_len(K)) {\n    test_idx  &lt;- which(folds == k)\n    train_idx &lt;- which(folds != k)\n    train_df  &lt;- df[train_idx, , drop = FALSE]\n    test_df   &lt;- df[test_idx,  , drop = FALSE]\n    pred &lt;- predict_model(model_type, train_df, test_df, rf_ntree = rf_ntree, rf_mtry = rf_mtry)\n    errs[k] &lt;- compute_error(test_df$y, pred)\n  }\n  mean(errs)\n}",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#true-error-and-monte-carlo-evaluation",
+    "href": "01-performance-measures.html#true-error-and-monte-carlo-evaluation",
+    "title": "2  Measures of model performance",
+    "section": "2.8 True error and Monte Carlo evaluation",
+    "text": "2.8 True error and Monte Carlo evaluation\nTo evaluate the accuracy of cross-validation estimators, we need a benchmark:\nthe true generalization error of each model.\nFor a fitted classifier \\(f\\), the true error is defined as \\[\nR(f) = \\Pr\\{ f(\\mathbf{X}) \\neq Y \\},\n\\] where \\((\\mathbf{X}, Y)\\) is a new independent draw from the same distribution.\nSince this probability cannot be computed exactly, we approximate it using a very large independent test set (e.g., \\(N_\\text{test} = 50{,}000\\)).\nWe train the model on the entire observed dataset, then evaluate its misclassification rate on the test set.\n\n\n2.8.1 Function to estimate true error\n\nestimate_true_error &lt;- function(model_type, train_df, N_test = 50000,\n                                rf_ntree = 500, rf_mtry = NULL) {\n  # Generate large independent test set\n  test_df &lt;- generate_data(N_test)\n  pred &lt;- predict_model(model_type, train_df, test_df, rf_ntree = rf_ntree, rf_mtry = rf_mtry)\n  compute_error(test_df$y, pred)\n}\n\n\none_replication &lt;- function(N, seed = NULL) {\n  if (!is.null(seed)) set.seed(seed)\n  df &lt;- generate_data(N)\n\n  # LDA\n  lda_loo   &lt;- evaluate_loo(df, \"lda\")\n  lda_k10   &lt;- evaluate_kfold(df, \"lda\", K = 10, seed = 1)\n  lda_true  &lt;- estimate_true_error(\"lda\", df)\n\n  # RF\n  rf_loo    &lt;- evaluate_loo(df, \"rf\")\n  rf_k10    &lt;- evaluate_kfold(df, \"rf\", K = 10, seed = 1)\n  rf_true   &lt;- estimate_true_error(\"rf\", df)\n\n  tibble::tibble(\n    N        = N,\n    model    = c(\"LDA\",\"LDA\",\"RF\",\"RF\"),\n    method   = c(\"LOO\",\"10-fold\",\"LOO\",\"10-fold\"),\n    est_err  = c(lda_loo, lda_k10, rf_loo, rf_k10),\n    true_err = c(lda_true, lda_true, rf_true, rf_true)\n  )\n}\n\n\nset.seed(20250925)\none_replication(40)\n\n# A tibble: 4 × 5\n      N model method  est_err true_err\n  &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;     &lt;dbl&gt;    &lt;dbl&gt;\n1    40 LDA   LOO       0.325    0.323\n2    40 LDA   10-fold   0.285    0.323\n3    40 RF    LOO       0.425    0.333\n4    40 RF    10-fold   0.38     0.333",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#simulation-setup",
+    "href": "01-performance-measures.html#simulation-setup",
+    "title": "2  Measures of model performance",
+    "section": "2.9 Simulation Setup",
+    "text": "2.9 Simulation Setup\nThe code below runs a Monte Carlo simulation across multiple sample sizes. It defines a set of sample sizes (Ns) and the number of replications (R=20) to run for each, sets a random seed for reproducibility, and initializes an empty list to store results. For each sample size (N) and replication (r), the function one_replication(N) is called to perform a single experiment, the output is tagged with the replication index, and then appended to the results list. In the end, results_list contains all simulated outcomes across every combination of sample size and replication, providing the data needed for further summarization and analysis.\n\nNs &lt;- c( 20, 30, 40, 50, 75, 100)\nR  &lt;- 20  # increase for tighter Monte Carlo precision\nset.seed(123)\nresults_list &lt;- list()\n\nfor (N in Ns) {\n  for (r in 1:R) {\n    res &lt;- one_replication(N)\n    res$rep &lt;- r\n    results_list &lt;- append(results_list, list(res))\n  }\n}",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
+    ]
+  },
+  {
+    "objectID": "01-performance-measures.html#summary",
+    "href": "01-performance-measures.html#summary",
+    "title": "2  Measures of model performance",
+    "section": "2.10 Summary",
+    "text": "2.10 Summary\n\nresults &lt;- dplyr::bind_rows(results_list)\nggplot(results, aes(x = factor(N), y = est_err, color = method)) +\n  geom_boxplot(outlier.alpha = 0.3, position = position_dodge(width = 0.8)) +\n  stat_summary(fun = mean, geom = \"line\", aes(group = method),\n               position = position_dodge(width = 0.8)) +\n  stat_summary(fun = mean, geom = \"point\", aes(group = method),\n               position = position_dodge(width = 0.8), size = 2) +\n  facet_wrap(~ model) +\n  labs(\n    title = \"Distribution of CV Estimates vs. True Error\",\n    x = \"Sample size N\",\n    y = \"Estimated error rate\",\n    color = \"CV Method\"\n  ) +\n  theme_minimal(base_size = 12)",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Measures of model performance</span>"
+    ]
+  },
+  {
+    "objectID": "02-partial-effect-plots.html#model-linear-regression-with-natural-splines",
+    "href": "02-partial-effect-plots.html#model-linear-regression-with-natural-splines",
+    "title": "3  Model Visualization",
+    "section": "3.2 Model: Linear Regression with Natural Splines",
+    "text": "3.2 Model: Linear Regression with Natural Splines\nWe model a flexible, nonlinear relationship by replacing raw predictors with natural cubic spline bases.\nLet \\(f_1(\\cdot)\\) and \\(f_2(\\cdot)\\) be smooth functions represented by spline bases. We fit\n\\[\nY \\;=\\; \\beta_0 \\;+\\; f_1(X_1)\\;+\\; \\big[f_2(X_2)\\times \\mathbb{1}(X_3)\\big]\\;+\\; \\gamma\\,\\mathbb{1}(X_3)\\;+\\; \\varepsilon,\n\\quad \\varepsilon \\sim \\mathcal{N}(0,\\sigma^2).\n\\]\n\nns(X1, df=5) and ns(X2, df=5) are natural spline bases with 5 degrees of freedom.\n\nThe interaction ns(X2, 5) * X3 lets the shape of the X2 effect differ by X3 (matches the DGP where the X2 effect turns on when \\(X_3=1\\)).\n\n\nlibrary(splines)\n\nlm_spline &lt;- lm(\n  Y ~ ns(X1, df = 5) + ns(X2, df = 5) * X3,\n  data = dat\n)",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Model Visualization</span>"
+    ]
+  },
+  {
+    "objectID": "02-partial-effect-plots.html#partial-effect-plots",
+    "href": "02-partial-effect-plots.html#partial-effect-plots",
+    "title": "3  Model Visualization",
+    "section": "3.3 Partial Effect Plots",
+    "text": "3.3 Partial Effect Plots\nWhat is a partial effect plot?\nFor an lm with splines, a partial effect (component-plus-residual) plot shows how a predictor contributes to the fitted values after adjusting for all other terms. We compute the term contribution for a variable (from predict(mod, type = \"terms\")), add the model residuals to form partial residuals, and plot those against the raw predictor. A smooth (LOESS) curve with a confidence band visualizes the nonlinear effect learned by the spline.\n\n3.3.1 Helper functions\nThe two helpers below produce ggplot figures: - simple_peplot() — single numeric predictor - simple_peplot_by() — numeric predictor split into separate curves by a factor (e.g., X3)\n\nsimple_peplot &lt;- function(mod, var, data, span = 0.8) {\n  tt &lt;- predict(mod, type = \"terms\")\n  cn &lt;- colnames(tt)\n  pick &lt;- grep(paste0(\"\\\\b\", var, \"\\\\b\"), cn)\n  if (length(pick) == 0L) stop(\"No model terms matched '\", var, \"'.\")\n  term_contrib &lt;- rowSums(tt[, pick, drop = FALSE])\n  pr &lt;- term_contrib + residuals(mod)\n  x  &lt;- data[[var]]\n\n  ggplot(tibble(x = x, pr = pr), aes(x, pr)) +\n    geom_point(alpha = 0.35, size = 1, color = \"steelblue\") +\n    geom_smooth(method = \"loess\", span = span, se = TRUE, linewidth = 1.1) +\n    labs(x = var, y = \"Partial residual\", title = paste(\"Partial effect of\", var)) +\n    theme_bw(base_size = 12)\n}\n\nsimple_peplot_by &lt;- function(mod, var, by, data, span = 0.8) {\n  tt &lt;- predict(mod, type = \"terms\")\n  pick &lt;- grep(paste0(\"\\\\b\", var, \"\\\\b\"), colnames(tt))\n  stopifnot(length(pick) &gt; 0)\n  term_contrib &lt;- rowSums(tt[, pick, drop = FALSE])\n  pr &lt;- term_contrib + residuals(mod)\n\n  df &lt;- tibble(x = data[[var]], pr = pr, grp = data[[by]])\n\n  ggplot(df, aes(x, pr, color = grp)) +\n    geom_point(alpha = 0.3, size = 1) +\n    geom_smooth(method = \"loess\", span = span, se = TRUE, linewidth = 1.1) +\n    labs(x = var, y = \"Partial residual\",\n         title = paste(\"Partial effect of\", var, \"by\", by), color = by) +\n    theme_bw(base_size = 12)\n}",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Model Visualization</span>"
+    ]
+  },
+  {
+    "objectID": "02-partial-effect-plots.html#final-plots",
+    "href": "02-partial-effect-plots.html#final-plots",
+    "title": "3  Model Visualization",
+    "section": "3.4 Final Plots",
+    "text": "3.4 Final Plots\nNow we put everything together: plotting the partial effects of our spline-based linear regression.\n\nsimple_peplot(lm_spline, \"X1\", data = dat)\n\n\n\n\n\n\n\nsimple_peplot(lm_spline, \"X2\", data = dat)\n\n\n\n\n\n\n\nsimple_peplot_by(lm_spline, var = \"X1\", by = \"X3\", data = dat)\n\n\n\n\n\n\n\nsimple_peplot_by(lm_spline, var = \"X2\", by = \"X3\", data = dat)",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Model Visualization</span>"
+    ]
   }
 ]

@@ -58,8 +58,6 @@ $$
 
 This reduces variance and improves generalization.
 
----
-
 ## Ten-Fold Cross-Validation
 
 We split $D$ into 10 disjoint folds of (approximately) equal size:
@@ -183,3 +181,249 @@ $$
 
 Do the same for Precision, Recall, F1, and AUC.  
 These $\overline{M}$ values represent the estimated generalization performance of the Random Forest model.
+
+
+## Simulation study
+
+The following part shows the simulation study comparing LOO vs 10-fold CV for LDA & Random Forest.
+
+## Data generation model
+We simulate i.i.d. data $\{(\mathbf{T}_i, Y_i)\}_{i=1}^n$ as:
+
+$$
+Y_i \sim \mathrm{Bin}(1, 0.5), \qquad
+\mathbf{T}_i \mid Y_i = y_i \;\sim\; N_2\!\left(
+\begin{bmatrix}
+y_i - \tfrac{1}{2} \\
+0
+\end{bmatrix},
+\, I_2
+\right),
+$$
+
+where $I_2$ is the $2\times2$ identity and $N_2$ denotes the bivariate normal.
+Equivalently, conditional on $Y_i$, the two features are independent with unit variance;  
+the first feature’s mean shifts by $y_i-0.5$, making it informative for $Y$.
+
+### R implementation of data generation
+
+```{r}
+# Data generation function
+generate_data <- function(N, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+  y  <- rbinom(N, size = 1, prob = 0.5)                 # Bernoulli(0.5)
+  x1 <- rnorm(N, mean = y - 0.5, sd = 1)                # mean depends on y
+  x2 <- rnorm(N, mean = 0,       sd = 1)                # mean 0, unit sd
+  data.frame(
+    x1 = x1,
+    x2 = x2,
+    y  = factor(y, levels = c(0,1))
+  )
+}
+```
+
+## Methods evaluated
+
+We evaluate two classifiers:
+
+- **Linear Discriminant Analysis (LDA)**
+- **Random Forest (RF)**
+
+Each model’s **generalization error** is estimated using two cross-validation approaches:
+
+- **Leave-one-out cross-validation (LOO-CV):**  
+  $$
+  \widehat{R}_{\text{LOO}} = \frac{1}{n} \sum_{i=1}^n \ell(y_i, \widehat{f}^{(-i)}(x_i)),
+  $$
+  where $\widehat{f}^{(-i)}$ is trained without observation $i$.
+
+- **10-fold cross-validation:**  
+  $$
+  \widehat{R}_{10\text{-fold}} =
+  \frac{1}{10}\sum_{k=1}^{10}\frac{1}{|\mathcal{I}_k|}\sum_{i\in\mathcal{I}_k} \ell(y_i,\widehat{f}^{(-k)}(x_i)),
+  $$
+  where folds $\mathcal{I}_1,\dots,\mathcal{I}_{10}$ partition the sample.
+
+The loss function $\ell$ is **0–1 loss** (misclassification error).  
+We then compare each estimator to the **true error** (approximated using a very large independent test set) and summarize performance using:
+
+- **Bias:** mean difference between estimated CV error and true error.  
+- **Variance:** variability of CV estimates across Monte Carlo replications.  
+- **MSE:** mean squared error, decomposed as  
+  $$
+  \text{MSE} = (\text{Bias})^2 + \text{Variance}.
+  $$
+
+### Libraries
+```{r}
+suppressPackageStartupMessages({
+  library(MASS)          # for LDA
+  library(randomForest)  # for Random Forest
+  library(dplyr)
+  library(tibble)
+  library(purrr)
+  library(ggplot2)
+})
+```
+### Stratified folds, model wrappers, and error computation
+
+```{r}
+make_stratified_folds <- function(y, K = 10, seed = 1) {
+  set.seed(seed)
+  y <- factor(y, levels = c("0","1"))
+  folds <- integer(length(y))
+  for (lvl in levels(y)) {
+    idx <- which(y == lvl)
+    idx <- sample(idx)
+    splits <- cut(seq_along(idx), breaks = K, labels = FALSE)
+    folds[idx] <- splits
+  }
+  folds
+}
+
+predict_model <- function(model_type, train_df, test_df, y_col = "y",
+                          rf_ntree = 500, rf_mtry = NULL) {
+  if (!is.factor(train_df[[y_col]])) train_df[[y_col]] <- factor(train_df[[y_col]], levels = c("0","1"))
+  if (!is.factor(test_df[[y_col]]))  test_df[[y_col]]  <- factor(test_df[[y_col]],  levels = c("0","1"))
+
+  if (model_type == "lda") {
+    fit <- MASS::lda(as.formula(paste(y_col, "~ .")), data = train_df)
+    post <- predict(fit, newdata = test_df)
+    pred <- factor(ifelse(post$posterior[, "1"] >= 0.5, "1", "0"), levels = c("0","1"))
+  } else if (model_type == "rf") {
+    if (is.null(rf_mtry)) rf_mtry <- floor(sqrt(ncol(train_df) - 1))
+    fit <- randomForest::randomForest(as.formula(paste(y_col, "~ .")),
+                                      data = train_df, ntree = rf_ntree, mtry = rf_mtry)
+    pred <- predict(fit, newdata = test_df, type = "response")
+  } else stop("Unknown model_type")
+
+  pred
+}
+
+compute_error <- function(y_true, pred) {
+  mean(pred != y_true)
+}
+```
+### Cross-validation evaluators
+```{r}
+evaluate_loo <- function(df, model_type, rf_ntree = 500, rf_mtry = NULL) {
+  n <- nrow(df)
+  errs <- numeric(n)
+  for (i in seq_len(n)) {
+    test_idx  <- i
+    train_idx <- setdiff(seq_len(n), i)
+    train_df  <- df[train_idx, , drop = FALSE]
+    test_df   <- df[test_idx,  , drop = FALSE]
+    pred <- predict_model(model_type, train_df, test_df, rf_ntree = rf_ntree, rf_mtry = rf_mtry)
+    errs[i] <- compute_error(test_df$y, pred)
+  }
+  mean(errs)
+}
+
+evaluate_kfold <- function(df, model_type, K = 10, seed = 1, rf_ntree = 500, rf_mtry = NULL) {
+  folds <- make_stratified_folds(df$y, K = K, seed = seed)
+  errs <- numeric(K)
+  for (k in seq_len(K)) {
+    test_idx  <- which(folds == k)
+    train_idx <- which(folds != k)
+    train_df  <- df[train_idx, , drop = FALSE]
+    test_df   <- df[test_idx,  , drop = FALSE]
+    pred <- predict_model(model_type, train_df, test_df, rf_ntree = rf_ntree, rf_mtry = rf_mtry)
+    errs[k] <- compute_error(test_df$y, pred)
+  }
+  mean(errs)
+}
+```
+## True error and Monte Carlo evaluation
+
+To evaluate the accuracy of cross-validation estimators, we need a benchmark:  
+the **true generalization error** of each model.  
+
+For a fitted classifier $f$, the true error is defined as
+$$
+R(f) = \Pr\{ f(\mathbf{X}) \neq Y \},
+$$
+where $(\mathbf{X}, Y)$ is a new independent draw from the same distribution.
+
+Since this probability cannot be computed exactly, we approximate it using a **very large independent test set** (e.g., $N_\text{test} = 50{,}000$).  
+We train the model on the entire observed dataset, then evaluate its misclassification rate on the test set.
+
+---
+
+### Function to estimate true error
+
+```{r}
+estimate_true_error <- function(model_type, train_df, N_test = 50000,
+                                rf_ntree = 500, rf_mtry = NULL) {
+  # Generate large independent test set
+  test_df <- generate_data(N_test)
+  pred <- predict_model(model_type, train_df, test_df, rf_ntree = rf_ntree, rf_mtry = rf_mtry)
+  compute_error(test_df$y, pred)
+}
+```
+
+```{r}
+one_replication <- function(N, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+  df <- generate_data(N)
+
+  # LDA
+  lda_loo   <- evaluate_loo(df, "lda")
+  lda_k10   <- evaluate_kfold(df, "lda", K = 10, seed = 1)
+  lda_true  <- estimate_true_error("lda", df)
+
+  # RF
+  rf_loo    <- evaluate_loo(df, "rf")
+  rf_k10    <- evaluate_kfold(df, "rf", K = 10, seed = 1)
+  rf_true   <- estimate_true_error("rf", df)
+
+  tibble::tibble(
+    N        = N,
+    model    = c("LDA","LDA","RF","RF"),
+    method   = c("LOO","10-fold","LOO","10-fold"),
+    est_err  = c(lda_loo, lda_k10, rf_loo, rf_k10),
+    true_err = c(lda_true, lda_true, rf_true, rf_true)
+  )
+}
+``` 
+```{r}
+set.seed(20250925)
+one_replication(40)
+```
+## Simulation Setup
+
+The code below runs a Monte Carlo simulation across multiple sample sizes. It defines a set of sample sizes (`Ns`) and the number of replications (`R=20`) to run for each, sets a random seed for reproducibility, and initializes an empty list to store results. For each sample size \(N\) and replication \(r\), the function `one_replication(N)` is called to perform a single experiment, the output is tagged with the replication index, and then appended to the results list. In the end, `results_list` contains all simulated outcomes across every combination of sample size and replication, providing the data needed for further summarization and analysis.
+```{r}
+Ns <- c( 20, 30, 40, 50, 75, 100)
+R  <- 20  # increase for tighter Monte Carlo precision
+set.seed(123)
+results_list <- list()
+
+for (N in Ns) {
+  for (r in 1:R) {
+    res <- one_replication(N)
+    res$rep <- r
+    results_list <- append(results_list, list(res))
+  }
+}
+```
+
+## Summary
+```{r}
+results <- dplyr::bind_rows(results_list)
+ggplot(results, aes(x = factor(N), y = est_err, color = method)) +
+  geom_boxplot(outlier.alpha = 0.3, position = position_dodge(width = 0.8)) +
+  stat_summary(fun = mean, geom = "line", aes(group = method),
+               position = position_dodge(width = 0.8)) +
+  stat_summary(fun = mean, geom = "point", aes(group = method),
+               position = position_dodge(width = 0.8), size = 2) +
+  facet_wrap(~ model) +
+  labs(
+    title = "Distribution of CV Estimates vs. True Error",
+    x = "Sample size N",
+    y = "Estimated error rate",
+    color = "CV Method"
+  ) +
+  theme_minimal(base_size = 12)
+
+```
