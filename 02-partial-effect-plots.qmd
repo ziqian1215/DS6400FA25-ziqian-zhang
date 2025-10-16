@@ -35,18 +35,17 @@ We model a flexible, nonlinear relationship by replacing raw predictors with **n
 Let $f_1(\cdot)$ and $f_2(\cdot)$ be smooth functions represented by spline bases. We fit
 
 $$
-Y \;=\; \beta_0 \;+\; f_1(X_1)\;+\; \big[f_2(X_2)\times \mathbb{1}(X_3)\big]\;+\; \gamma\,\mathbb{1}(X_3)\;+\; \varepsilon,
+Y \;=\; \beta_0 \;+\; f_1(X_1)\;+\; f_2(X_2)\\;+\; \gamma\,\mathbb{1}(X_3)\;+\; \varepsilon,
 \quad \varepsilon \sim \mathcal{N}(0,\sigma^2).
 $$
 
 - `ns(X1, df=5)` and `ns(X2, df=5)` are **natural spline** bases with 5 degrees of freedom.  
-- The interaction `ns(X2, 5) * X3` lets the **shape of the X2 effect differ by X3** (matches the DGP where the X2 effect turns on when $X_3=1$).
+- `ns(X3, df=3)` effectively lets the model represent it smoothly if treated as numeric, but it’s basically equivalent to a categorical main effect.
 
 ```{r}
 library(splines)
-
 lm_spline <- lm(
-  Y ~ ns(X1, df = 5) + ns(X2, df = 5) * X3,
+  Y ~ ns(X1, df = 5) + ns(X2, df = 5) + ns(as.numeric(X3), df = 3),
   data = dat
 )
 ```
@@ -105,4 +104,182 @@ simple_peplot(lm_spline, "X1", data = dat)
 simple_peplot(lm_spline, "X2", data = dat)
 simple_peplot_by(lm_spline, var = "X1", by = "X3", data = dat)
 simple_peplot_by(lm_spline, var = "X2", by = "X3", data = dat)
+```
+## Random Forest with Partial Dependence Plots
+```{r}
+library(pdp)            
+library(patchwork) 
+library(randomForest) 
+rf <- randomForest(Y ~ X1 + X2 + X3, data = dat, ntree = 500, mtry = 2, importance = TRUE)
+```
+```{r}
+pstyle <- function(p, title) p + labs(title = title, x = NULL, y = "Partial dependence") +
+  theme_bw(base_size = 12)
+
+p_rf_x1 <- partial(rf, pred.var = "X1", grid.resolution = 60, train = dat)     |> autoplot() |> pstyle("RF: effect of X1")
+p_rf_x2 <- partial(rf, pred.var = "X2", grid.resolution = 60, train = dat)     |> autoplot() |> pstyle("RF: effect of X2")
+p_rf_x3 <- partial(rf, pred.var = "X3", grid.resolution = 2,  train = dat)     |> autoplot() |> pstyle("RF: effect of X3")
+
+# Spline-Linear PDPs
+p_lm_x1 <- partial(lm_spline, pred.var = "X1", grid.resolution = 60, train = dat) |> autoplot() |> pstyle("Spline-LM: effect of X1")
+p_lm_x2 <- partial(lm_spline, pred.var = "X2", grid.resolution = 60, train = dat) |> autoplot() |> pstyle("Spline-LM: effect of X2")
+p_lm_x3 <- partial(lm_spline, pred.var = "X3", grid.resolution = 2,  train = dat) |> autoplot() |> pstyle("Spline-LM: effect of X3")
+
+(p_rf_x1 | p_rf_x2 | p_rf_x3) /
+(p_lm_x1 | p_lm_x2 | p_lm_x3)
+```
+```{r}
+pstyle <- function(p, title) p +
+  labs(title = title, x = NULL, y = "Partial dependence") +
+  theme_bw(base_size = 12)
+
+p_rf_x1_x3 <- partial(rf, pred.var = c("X1", "X3"), grid.resolution = 60, train = dat) |>
+  autoplot(rug = FALSE, contour = FALSE) |> pstyle("RF: effect of X1 by X3")
+
+p_rf_x2_x3 <- partial(rf, pred.var = c("X2", "X3"), grid.resolution = 60, train = dat) |>
+  autoplot(rug = FALSE, contour = FALSE) |> pstyle("RF: effect of X2 by X3")
+
+p_rf_x1_x3 / p_rf_x2_x3
+```
+## Individual Conditional Expectation (ICE) plots
+
+ICE shows one curve **per observation**, revealing heterogeneity that PDP/PE can hide.
+```{r}
+# ---- helpers styled like pstyle() 
+pstyle_fx <- function(p, title, xlab, ylab) {
+  p + labs(title = title, x = xlab, y = ylab) + theme_bw(base_size = 12)
+}
+
+# ---- ICE
+plot_ice <- function(model, data, var, grid.size = 60, title = NULL) {
+  grid_vals <- seq(min(data[[var]]), max(data[[var]]), length.out = grid.size)
+
+  ice_data <- purrr::map_dfr(seq_len(nrow(data)), function(i) {
+    new_dat <- data[rep(i, grid.size), ]
+    new_dat[[var]] <- grid_vals
+    tibble(
+      ID   = i,
+      x    = grid_vals,
+      yhat = as.numeric(predict(model, newdata = new_dat))
+    )
+  })
+
+  pdp_data <- ice_data |>
+    dplyr::group_by(x) |>
+    dplyr::summarise(mean_y = mean(yhat), .groups = "drop")
+
+  g <- ggplot(ice_data, aes(x = x, y = yhat, group = ID)) +
+    geom_line(alpha = 0.18, linewidth = 0.4, color = "steelblue") +
+    geom_line(data = pdp_data, aes(x = x, y = mean_y),
+              inherit.aes = FALSE, color = "red", linewidth = 1.1)
+
+  pstyle_fx(g, title %||% paste0("ICE: ", var), xlab = var, ylab = "Predicted Y")
+}
+
+# ---- ICE by a factor (e.g., X3) ----
+plot_ice_by <- function(model, data, var, by, grid.size = 60, title = NULL) {
+  grid_vals <- seq(min(data[[var]]), max(data[[var]]), length.out = grid.size)
+
+  ice_data <- purrr::map_dfr(seq_len(nrow(data)), function(i) {
+    new_dat <- data[rep(i, grid.size), ]
+    new_dat[[var]] <- grid_vals
+    tibble(
+      ID   = i,
+      grp  = new_dat[[by]][1],
+      x    = grid_vals,
+      yhat = as.numeric(predict(model, newdata = new_dat))
+    )
+  })
+
+  pdp_data <- ice_data |>
+    dplyr::group_by(grp, x) |>
+    dplyr::summarise(mean_y = mean(yhat), .groups = "drop")
+
+  g <- ggplot(ice_data, aes(x = x, y = yhat, group = interaction(ID, grp), color = grp)) +
+    geom_line(alpha = 0.18, linewidth = 0.35) +
+    geom_line(data = pdp_data, aes(x = x, y = mean_y, color = grp),
+              inherit.aes = FALSE, linewidth = 1.05)
+
+  pstyle_fx(g, title %||% paste0("ICE: ", var, " by ", by), xlab = var, ylab = "Predicted Y")
+}
+
+```
+
+## Accumulated Local Effects (ALE) plots
+
+ALE curves summarize local effects and are often more reliable than PDP when features are correlated.
+```{r}
+# ---- ALE (no extra packages) ----
+plot_ale <- function(model, data, var, grid.size = 40, title = NULL) {
+  qs <- stats::quantile(data[[var]], probs = seq(0, 1, length.out = grid.size), names = FALSE)
+  mids <- (qs[-1] + qs[-length(qs)]) / 2
+
+  delta <- numeric(length(qs) - 1)
+  for (k in seq_len(length(delta))) {
+    low  <- qs[k]; high <- qs[k + 1]
+    idx <- which(data[[var]] >= low & data[[var]] < high)
+    if (length(idx)) {
+      dat_low  <- data[idx, ];  dat_low[[var]]  <- low
+      dat_high <- data[idx, ]; dat_high[[var]] <- high
+      delta[k] <- mean(predict(model, dat_high) - predict(model, dat_low))
+    } else {
+      delta[k] <- 0
+    }
+  }
+
+  ale <- cumsum(delta)
+  ale <- ale - mean(ale)
+
+  g <- ggplot(tibble(x = mids, y = ale), aes(x, y)) +
+    geom_line(linewidth = 1.1)
+
+  pstyle_fx(g, title %||% paste0("ALE: ", var), xlab = var, ylab = "Accumulated local effect")
+}
+```
+```{r}
+# ICE / ALE for the spline model
+ice_x1 <- plot_ice(lm_spline, dat, "X1", grid.size = 60, title = "ICE: X1 (Spline-LM)")
+ice_x2 <- plot_ice(lm_spline, dat, "X2", grid.size = 60, title = "ICE: X2 (Spline-LM)")
+
+ale_x1 <- plot_ale(lm_spline, dat, "X1", grid.size = 40, title = "ALE: X1 (Spline-LM)")
+ale_x2 <- plot_ale(lm_spline, dat, "X2", grid.size = 40, title = "ALE: X2 (Spline-LM)")
+
+ice_x2_byx3 <- plot_ice_by(lm_spline, dat, var = "X2", by = "X3", grid.size = 60,
+                           title = "ICE: X2 by X3 (Spline-LM)")                        
+ice_x1_byx3 <- plot_ice_by(lm_spline, dat, var = "X1", by = "X3", grid.size = 60,
+                           title = "ICE: X1 by X3 (Spline-LM)")                           
+
+# Arrange like your PDP grid
+(ice_x1 | ice_x2) /
+(ale_x1 | ale_x2)
+
+# Show the grouped ICE as well
+ice_x1_byx3
+ice_x2_byx3
+```
+```{r}
+# ICE for RF
+ice_rf_x1 <- plot_ice(rf,  dat, "X1", grid.size = 60, title = "ICE: X1 (Random Forest)")
+ice_rf_x2 <- plot_ice(rf,  dat, "X2", grid.size = 60, title = "ICE: X2 (Random Forest)")
+
+# ICE by X3 for RF
+ice_rf_x1_byx3 <- plot_ice_by(rf, dat, var = "X1", by = "X3", grid.size = 60,
+                              title = "ICE: X1 by X3 (Random Forest)")
+ice_rf_x2_byx3 <- plot_ice_by(rf, dat, var = "X2", by = "X3", grid.size = 60,
+                              title = "ICE: X2 by X3 (Random Forest)")
+
+# ALE for RF
+ale_rf_x1 <- plot_ale(rf,  dat, "X1", grid.size = 40, title = "ALE: X1 (Random Forest)")
+ale_rf_x2 <- plot_ale(rf,  dat, "X2", grid.size = 40, title = "ALE: X2 (Random Forest)")
+
+# --- Arrange with patchwork (optional) ---
+library(patchwork)
+
+# Side-by-side ICE and ALE for RF
+(ice_rf_x1 | ice_rf_x2) /
+(ale_rf_x1 | ale_rf_x2)
+
+# Grouped ICE by X3
+ice_rf_x1_byx3
+ice_rf_x2_byx3
 ```

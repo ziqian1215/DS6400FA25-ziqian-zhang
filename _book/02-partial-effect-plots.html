@@ -227,6 +227,9 @@ window.Quarto = {
   <li><a href="#helper-functions" id="toc-helper-functions" class="nav-link" data-scroll-target="#helper-functions"><span class="header-section-number">3.3.1</span> Helper functions</a></li>
   </ul></li>
   <li><a href="#final-plots" id="toc-final-plots" class="nav-link" data-scroll-target="#final-plots"><span class="header-section-number">3.4</span> Final Plots</a></li>
+  <li><a href="#random-forest-with-partial-dependence-plots" id="toc-random-forest-with-partial-dependence-plots" class="nav-link" data-scroll-target="#random-forest-with-partial-dependence-plots"><span class="header-section-number">3.5</span> Random Forest with Partial Dependence Plots</a></li>
+  <li><a href="#individual-conditional-expectation-ice-plots" id="toc-individual-conditional-expectation-ice-plots" class="nav-link" data-scroll-target="#individual-conditional-expectation-ice-plots"><span class="header-section-number">3.6</span> Individual Conditional Expectation (ICE) plots</a></li>
+  <li><a href="#accumulated-local-effects-ale-plots" id="toc-accumulated-local-effects-ale-plots" class="nav-link" data-scroll-target="#accumulated-local-effects-ale-plots"><span class="header-section-number">3.7</span> Accumulated Local Effects (ALE) plots</a></li>
   </ul>
 </nav>
     </div>
@@ -293,21 +296,24 @@ V[Y \mid X]=1,
 <p>We model a flexible, nonlinear relationship by replacing raw predictors with <strong>natural cubic spline</strong> bases.<br>
 Let <span class="math inline">\(f_1(\cdot)\)</span> and <span class="math inline">\(f_2(\cdot)\)</span> be smooth functions represented by spline bases. We fit</p>
 <p><span class="math display">\[
-Y \;=\; \beta_0 \;+\; f_1(X_1)\;+\; \big[f_2(X_2)\times \mathbb{1}(X_3)\big]\;+\; \gamma\,\mathbb{1}(X_3)\;+\; \varepsilon,
+Y \;=\; \beta_0 \;+\; f_1(X_1)\;+\; f_2(X_2)\\;+\; \gamma\,\mathbb{1}(X_3)\;+\; \varepsilon,
 \quad \varepsilon \sim \mathcal{N}(0,\sigma^2).
 \]</span></p>
 <ul>
 <li><code>ns(X1, df=5)</code> and <code>ns(X2, df=5)</code> are <strong>natural spline</strong> bases with 5 degrees of freedom.<br>
 </li>
-<li>The interaction <code>ns(X2, 5) * X3</code> lets the <strong>shape of the X2 effect differ by X3</strong> (matches the DGP where the X2 effect turns on when <span class="math inline">\(X_3=1\)</span>).</li>
+<li><code>ns(X3, df=3)</code> effectively lets the model represent it smoothly if treated as numeric, but it’s basically equivalent to a categorical main effect.</li>
 </ul>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(splines)</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>lm_spline <span class="ot">&lt;-</span> <span class="fu">lm</span>(</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  Y <span class="sc">~</span> <span class="fu">ns</span>(X1, <span class="at">df =</span> <span class="dv">5</span>) <span class="sc">+</span> <span class="fu">ns</span>(X2, <span class="at">df =</span> <span class="dv">5</span>) <span class="sc">*</span> X3,</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>lm_spline <span class="ot">&lt;-</span> <span class="fu">lm</span>(</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  Y <span class="sc">~</span> <span class="fu">ns</span>(X1, <span class="at">df =</span> <span class="dv">5</span>) <span class="sc">+</span> <span class="fu">ns</span>(X2, <span class="at">df =</span> <span class="dv">5</span>) <span class="sc">+</span> <span class="fu">ns</span>(<span class="fu">as.numeric</span>(X3), <span class="at">df =</span> <span class="dv">3</span>),</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">data =</span> dat</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in ns(as.numeric(X3), df = 3): shoving 'interior' knots matching
+boundary knots to inside</code></pre>
+</div>
 </div>
 </section>
 <section id="partial-effect-plots" class="level2" data-number="3.3">
@@ -318,38 +324,38 @@ For an <code>lm</code> with splines, a partial effect (component-plus-residual) 
 <h3 data-number="3.3.1" class="anchored" data-anchor-id="helper-functions"><span class="header-section-number">3.3.1</span> Helper functions</h3>
 <p>The two helpers below produce ggplot figures: - <code>simple_peplot()</code> — single numeric predictor - <code>simple_peplot_by()</code> — numeric predictor split into separate curves by a factor (e.g., <code>X3</code>)</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>simple_peplot <span class="ot">&lt;-</span> <span class="cf">function</span>(mod, var, data, <span class="at">span =</span> <span class="fl">0.8</span>) {</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  tt <span class="ot">&lt;-</span> <span class="fu">predict</span>(mod, <span class="at">type =</span> <span class="st">"terms"</span>)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  cn <span class="ot">&lt;-</span> <span class="fu">colnames</span>(tt)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  pick <span class="ot">&lt;-</span> <span class="fu">grep</span>(<span class="fu">paste0</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">b"</span>, var, <span class="st">"</span><span class="sc">\\</span><span class="st">b"</span>), cn)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(pick) <span class="sc">==</span> <span class="dv">0</span>L) <span class="fu">stop</span>(<span class="st">"No model terms matched '"</span>, var, <span class="st">"'."</span>)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  term_contrib <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(tt[, pick, <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  pr <span class="ot">&lt;-</span> term_contrib <span class="sc">+</span> <span class="fu">residuals</span>(mod)</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  x  <span class="ot">&lt;-</span> data[[var]]</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">tibble</span>(<span class="at">x =</span> x, <span class="at">pr =</span> pr), <span class="fu">aes</span>(x, pr)) <span class="sc">+</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.35</span>, <span class="at">size =</span> <span class="dv">1</span>, <span class="at">color =</span> <span class="st">"steelblue"</span>) <span class="sc">+</span></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">span =</span> span, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">linewidth =</span> <span class="fl">1.1</span>) <span class="sc">+</span></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> var, <span class="at">y =</span> <span class="st">"Partial residual"</span>, <span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Partial effect of"</span>, var)) <span class="sc">+</span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">12</span>)</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>simple_peplot_by <span class="ot">&lt;-</span> <span class="cf">function</span>(mod, var, by, data, <span class="at">span =</span> <span class="fl">0.8</span>) {</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  tt <span class="ot">&lt;-</span> <span class="fu">predict</span>(mod, <span class="at">type =</span> <span class="st">"terms"</span>)</span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  pick <span class="ot">&lt;-</span> <span class="fu">grep</span>(<span class="fu">paste0</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">b"</span>, var, <span class="st">"</span><span class="sc">\\</span><span class="st">b"</span>), <span class="fu">colnames</span>(tt))</span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">length</span>(pick) <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  term_contrib <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(tt[, pick, <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  pr <span class="ot">&lt;-</span> term_contrib <span class="sc">+</span> <span class="fu">residuals</span>(mod)</span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">x =</span> data[[var]], <span class="at">pr =</span> pr, <span class="at">grp =</span> data[[by]])</span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(df, <span class="fu">aes</span>(x, pr, <span class="at">color =</span> grp)) <span class="sc">+</span></span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.3</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
-<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">span =</span> span, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">linewidth =</span> <span class="fl">1.1</span>) <span class="sc">+</span></span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> var, <span class="at">y =</span> <span class="st">"Partial residual"</span>,</span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>         <span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Partial effect of"</span>, var, <span class="st">"by"</span>, by), <span class="at">color =</span> by) <span class="sc">+</span></span>
-<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">12</span>)</span>
-<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>simple_peplot <span class="ot">&lt;-</span> <span class="cf">function</span>(mod, var, data, <span class="at">span =</span> <span class="fl">0.8</span>) {</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  tt <span class="ot">&lt;-</span> <span class="fu">predict</span>(mod, <span class="at">type =</span> <span class="st">"terms"</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  cn <span class="ot">&lt;-</span> <span class="fu">colnames</span>(tt)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  pick <span class="ot">&lt;-</span> <span class="fu">grep</span>(<span class="fu">paste0</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">b"</span>, var, <span class="st">"</span><span class="sc">\\</span><span class="st">b"</span>), cn)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">length</span>(pick) <span class="sc">==</span> <span class="dv">0</span>L) <span class="fu">stop</span>(<span class="st">"No model terms matched '"</span>, var, <span class="st">"'."</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  term_contrib <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(tt[, pick, <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  pr <span class="ot">&lt;-</span> term_contrib <span class="sc">+</span> <span class="fu">residuals</span>(mod)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  x  <span class="ot">&lt;-</span> data[[var]]</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">tibble</span>(<span class="at">x =</span> x, <span class="at">pr =</span> pr), <span class="fu">aes</span>(x, pr)) <span class="sc">+</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.35</span>, <span class="at">size =</span> <span class="dv">1</span>, <span class="at">color =</span> <span class="st">"steelblue"</span>) <span class="sc">+</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">span =</span> span, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">linewidth =</span> <span class="fl">1.1</span>) <span class="sc">+</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> var, <span class="at">y =</span> <span class="st">"Partial residual"</span>, <span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Partial effect of"</span>, var)) <span class="sc">+</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">12</span>)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>simple_peplot_by <span class="ot">&lt;-</span> <span class="cf">function</span>(mod, var, by, data, <span class="at">span =</span> <span class="fl">0.8</span>) {</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  tt <span class="ot">&lt;-</span> <span class="fu">predict</span>(mod, <span class="at">type =</span> <span class="st">"terms"</span>)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  pick <span class="ot">&lt;-</span> <span class="fu">grep</span>(<span class="fu">paste0</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">b"</span>, var, <span class="st">"</span><span class="sc">\\</span><span class="st">b"</span>), <span class="fu">colnames</span>(tt))</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">length</span>(pick) <span class="sc">&gt;</span> <span class="dv">0</span>)</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  term_contrib <span class="ot">&lt;-</span> <span class="fu">rowSums</span>(tt[, pick, <span class="at">drop =</span> <span class="cn">FALSE</span>])</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  pr <span class="ot">&lt;-</span> term_contrib <span class="sc">+</span> <span class="fu">residuals</span>(mod)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>  df <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">x =</span> data[[var]], <span class="at">pr =</span> pr, <span class="at">grp =</span> data[[by]])</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(df, <span class="fu">aes</span>(x, pr, <span class="at">color =</span> grp)) <span class="sc">+</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.3</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">span =</span> span, <span class="at">se =</span> <span class="cn">TRUE</span>, <span class="at">linewidth =</span> <span class="fl">1.1</span>) <span class="sc">+</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> var, <span class="at">y =</span> <span class="st">"Partial residual"</span>,</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>         <span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Partial effect of"</span>, var, <span class="st">"by"</span>, by), <span class="at">color =</span> by) <span class="sc">+</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">12</span>)</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 </section>
@@ -357,7 +363,7 @@ For an <code>lm</code> with splines, a partial effect (component-plus-residual) 
 <h2 data-number="3.4" class="anchored" data-anchor-id="final-plots"><span class="header-section-number">3.4</span> Final Plots</h2>
 <p>Now we put everything together: plotting the <strong>partial effects</strong> of our spline-based linear regression.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">simple_peplot</span>(lm_spline, <span class="st">"X1"</span>, <span class="at">data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">simple_peplot</span>(lm_spline, <span class="st">"X1"</span>, <span class="at">data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -365,7 +371,7 @@ For an <code>lm</code> with splines, a partial effect (component-plus-residual) 
 </figure>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">simple_peplot</span>(lm_spline, <span class="st">"X2"</span>, <span class="at">data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">simple_peplot</span>(lm_spline, <span class="st">"X2"</span>, <span class="at">data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -373,7 +379,7 @@ For an <code>lm</code> with splines, a partial effect (component-plus-residual) 
 </figure>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">simple_peplot_by</span>(lm_spline, <span class="at">var =</span> <span class="st">"X1"</span>, <span class="at">by =</span> <span class="st">"X3"</span>, <span class="at">data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">simple_peplot_by</span>(lm_spline, <span class="at">var =</span> <span class="st">"X1"</span>, <span class="at">by =</span> <span class="st">"X3"</span>, <span class="at">data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
@@ -381,11 +387,274 @@ For an <code>lm</code> with splines, a partial effect (component-plus-residual) 
 </figure>
 </div>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">simple_peplot_by</span>(lm_spline, <span class="at">var =</span> <span class="st">"X2"</span>, <span class="at">by =</span> <span class="st">"X3"</span>, <span class="at">data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">simple_peplot_by</span>(lm_spline, <span class="at">var =</span> <span class="st">"X2"</span>, <span class="at">by =</span> <span class="st">"X3"</span>, <span class="at">data =</span> dat)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
 <p><img src="02-partial-effect-plots_files/figure-html/unnamed-chunk-4-4.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="random-forest-with-partial-dependence-plots" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="random-forest-with-partial-dependence-plots"><span class="header-section-number">3.5</span> Random Forest with Partial Dependence Plots</h2>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pdp)            </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'pdp'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:purrr':
+
+    partial</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork) </span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(randomForest) </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>randomForest 4.7-1.2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Type rfNews() to see new features/changes/bug fixes.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'randomForest'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:dplyr':
+
+    combine</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:ggplot2':
+
+    margin</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>rf <span class="ot">&lt;-</span> <span class="fu">randomForest</span>(Y <span class="sc">~</span> X1 <span class="sc">+</span> X2 <span class="sc">+</span> X3, <span class="at">data =</span> dat, <span class="at">ntree =</span> <span class="dv">500</span>, <span class="at">mtry =</span> <span class="dv">2</span>, <span class="at">importance =</span> <span class="cn">TRUE</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>pstyle <span class="ot">&lt;-</span> <span class="cf">function</span>(p, title) p <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">title =</span> title, <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"Partial dependence"</span>) <span class="sc">+</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">12</span>)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>p_rf_x1 <span class="ot">&lt;-</span> <span class="fu">partial</span>(rf, <span class="at">pred.var =</span> <span class="st">"X1"</span>, <span class="at">grid.resolution =</span> <span class="dv">60</span>, <span class="at">train =</span> dat)     <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">|&gt;</span> <span class="fu">pstyle</span>(<span class="st">"RF: effect of X1"</span>)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>p_rf_x2 <span class="ot">&lt;-</span> <span class="fu">partial</span>(rf, <span class="at">pred.var =</span> <span class="st">"X2"</span>, <span class="at">grid.resolution =</span> <span class="dv">60</span>, <span class="at">train =</span> dat)     <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">|&gt;</span> <span class="fu">pstyle</span>(<span class="st">"RF: effect of X2"</span>)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>p_rf_x3 <span class="ot">&lt;-</span> <span class="fu">partial</span>(rf, <span class="at">pred.var =</span> <span class="st">"X3"</span>, <span class="at">grid.resolution =</span> <span class="dv">2</span>,  <span class="at">train =</span> dat)     <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">|&gt;</span> <span class="fu">pstyle</span>(<span class="st">"RF: effect of X3"</span>)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Spline-Linear PDPs</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>p_lm_x1 <span class="ot">&lt;-</span> <span class="fu">partial</span>(lm_spline, <span class="at">pred.var =</span> <span class="st">"X1"</span>, <span class="at">grid.resolution =</span> <span class="dv">60</span>, <span class="at">train =</span> dat) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">|&gt;</span> <span class="fu">pstyle</span>(<span class="st">"Spline-LM: effect of X1"</span>)</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>p_lm_x2 <span class="ot">&lt;-</span> <span class="fu">partial</span>(lm_spline, <span class="at">pred.var =</span> <span class="st">"X2"</span>, <span class="at">grid.resolution =</span> <span class="dv">60</span>, <span class="at">train =</span> dat) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">|&gt;</span> <span class="fu">pstyle</span>(<span class="st">"Spline-LM: effect of X2"</span>)</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>p_lm_x3 <span class="ot">&lt;-</span> <span class="fu">partial</span>(lm_spline, <span class="at">pred.var =</span> <span class="st">"X3"</span>, <span class="at">grid.resolution =</span> <span class="dv">2</span>,  <span class="at">train =</span> dat) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">|&gt;</span> <span class="fu">pstyle</span>(<span class="st">"Spline-LM: effect of X3"</span>)</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>(p_rf_x1 <span class="sc">|</span> p_rf_x2 <span class="sc">|</span> p_rf_x3) <span class="sc">/</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>(p_lm_x1 <span class="sc">|</span> p_lm_x2 <span class="sc">|</span> p_lm_x3)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="02-partial-effect-plots_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>pstyle <span class="ot">&lt;-</span> <span class="cf">function</span>(p, title) p <span class="sc">+</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> title, <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"Partial dependence"</span>) <span class="sc">+</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">12</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>p_rf_x1_x3 <span class="ot">&lt;-</span> <span class="fu">partial</span>(rf, <span class="at">pred.var =</span> <span class="fu">c</span>(<span class="st">"X1"</span>, <span class="st">"X3"</span>), <span class="at">grid.resolution =</span> <span class="dv">60</span>, <span class="at">train =</span> dat) <span class="sc">|&gt;</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">rug =</span> <span class="cn">FALSE</span>, <span class="at">contour =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span> <span class="fu">pstyle</span>(<span class="st">"RF: effect of X1 by X3"</span>)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>p_rf_x2_x3 <span class="ot">&lt;-</span> <span class="fu">partial</span>(rf, <span class="at">pred.var =</span> <span class="fu">c</span>(<span class="st">"X2"</span>, <span class="st">"X3"</span>), <span class="at">grid.resolution =</span> <span class="dv">60</span>, <span class="at">train =</span> dat) <span class="sc">|&gt;</span></span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">rug =</span> <span class="cn">FALSE</span>, <span class="at">contour =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span> <span class="fu">pstyle</span>(<span class="st">"RF: effect of X2 by X3"</span>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>p_rf_x1_x3 <span class="sc">/</span> p_rf_x2_x3</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="02-partial-effect-plots_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="individual-conditional-expectation-ice-plots" class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="individual-conditional-expectation-ice-plots"><span class="header-section-number">3.6</span> Individual Conditional Expectation (ICE) plots</h2>
+<p>ICE shows one curve <strong>per observation</strong>, revealing heterogeneity that PDP/PE can hide.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- helpers styled like pstyle() </span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>pstyle_fx <span class="ot">&lt;-</span> <span class="cf">function</span>(p, title, xlab, ylab) {</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  p <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">title =</span> title, <span class="at">x =</span> xlab, <span class="at">y =</span> ylab) <span class="sc">+</span> <span class="fu">theme_bw</span>(<span class="at">base_size =</span> <span class="dv">12</span>)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- ICE</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>plot_ice <span class="ot">&lt;-</span> <span class="cf">function</span>(model, data, var, <span class="at">grid.size =</span> <span class="dv">60</span>, <span class="at">title =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  grid_vals <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fu">min</span>(data[[var]]), <span class="fu">max</span>(data[[var]]), <span class="at">length.out =</span> grid.size)</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>  ice_data <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map_dfr</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(data)), <span class="cf">function</span>(i) {</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    new_dat <span class="ot">&lt;-</span> data[<span class="fu">rep</span>(i, grid.size), ]</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    new_dat[[var]] <span class="ot">&lt;-</span> grid_vals</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">ID   =</span> i,</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">x    =</span> grid_vals,</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">yhat =</span> <span class="fu">as.numeric</span>(<span class="fu">predict</span>(model, <span class="at">newdata =</span> new_dat))</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>  pdp_data <span class="ot">&lt;-</span> ice_data <span class="sc">|&gt;</span></span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">group_by</span>(x) <span class="sc">|&gt;</span></span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">summarise</span>(<span class="at">mean_y =</span> <span class="fu">mean</span>(yhat), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>  g <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(ice_data, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> yhat, <span class="at">group =</span> ID)) <span class="sc">+</span></span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="at">alpha =</span> <span class="fl">0.18</span>, <span class="at">linewidth =</span> <span class="fl">0.4</span>, <span class="at">color =</span> <span class="st">"steelblue"</span>) <span class="sc">+</span></span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="at">data =</span> pdp_data, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> mean_y),</span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a>              <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>, <span class="at">color =</span> <span class="st">"red"</span>, <span class="at">linewidth =</span> <span class="fl">1.1</span>)</span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pstyle_fx</span>(g, title <span class="sc">%||%</span> <span class="fu">paste0</span>(<span class="st">"ICE: "</span>, var), <span class="at">xlab =</span> var, <span class="at">ylab =</span> <span class="st">"Predicted Y"</span>)</span>
+<span id="cb22-30"><a href="#cb22-30" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-31"><a href="#cb22-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-32"><a href="#cb22-32" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- ICE by a factor (e.g., X3) ----</span></span>
+<span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a>plot_ice_by <span class="ot">&lt;-</span> <span class="cf">function</span>(model, data, var, by, <span class="at">grid.size =</span> <span class="dv">60</span>, <span class="at">title =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a>  grid_vals <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fu">min</span>(data[[var]]), <span class="fu">max</span>(data[[var]]), <span class="at">length.out =</span> grid.size)</span>
+<span id="cb22-35"><a href="#cb22-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-36"><a href="#cb22-36" aria-hidden="true" tabindex="-1"></a>  ice_data <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map_dfr</span>(<span class="fu">seq_len</span>(<span class="fu">nrow</span>(data)), <span class="cf">function</span>(i) {</span>
+<span id="cb22-37"><a href="#cb22-37" aria-hidden="true" tabindex="-1"></a>    new_dat <span class="ot">&lt;-</span> data[<span class="fu">rep</span>(i, grid.size), ]</span>
+<span id="cb22-38"><a href="#cb22-38" aria-hidden="true" tabindex="-1"></a>    new_dat[[var]] <span class="ot">&lt;-</span> grid_vals</span>
+<span id="cb22-39"><a href="#cb22-39" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
+<span id="cb22-40"><a href="#cb22-40" aria-hidden="true" tabindex="-1"></a>      <span class="at">ID   =</span> i,</span>
+<span id="cb22-41"><a href="#cb22-41" aria-hidden="true" tabindex="-1"></a>      <span class="at">grp  =</span> new_dat[[by]][<span class="dv">1</span>],</span>
+<span id="cb22-42"><a href="#cb22-42" aria-hidden="true" tabindex="-1"></a>      <span class="at">x    =</span> grid_vals,</span>
+<span id="cb22-43"><a href="#cb22-43" aria-hidden="true" tabindex="-1"></a>      <span class="at">yhat =</span> <span class="fu">as.numeric</span>(<span class="fu">predict</span>(model, <span class="at">newdata =</span> new_dat))</span>
+<span id="cb22-44"><a href="#cb22-44" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb22-45"><a href="#cb22-45" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb22-46"><a href="#cb22-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-47"><a href="#cb22-47" aria-hidden="true" tabindex="-1"></a>  pdp_data <span class="ot">&lt;-</span> ice_data <span class="sc">|&gt;</span></span>
+<span id="cb22-48"><a href="#cb22-48" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">group_by</span>(grp, x) <span class="sc">|&gt;</span></span>
+<span id="cb22-49"><a href="#cb22-49" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">summarise</span>(<span class="at">mean_y =</span> <span class="fu">mean</span>(yhat), <span class="at">.groups =</span> <span class="st">"drop"</span>)</span>
+<span id="cb22-50"><a href="#cb22-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-51"><a href="#cb22-51" aria-hidden="true" tabindex="-1"></a>  g <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(ice_data, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> yhat, <span class="at">group =</span> <span class="fu">interaction</span>(ID, grp), <span class="at">color =</span> grp)) <span class="sc">+</span></span>
+<span id="cb22-52"><a href="#cb22-52" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="at">alpha =</span> <span class="fl">0.18</span>, <span class="at">linewidth =</span> <span class="fl">0.35</span>) <span class="sc">+</span></span>
+<span id="cb22-53"><a href="#cb22-53" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="at">data =</span> pdp_data, <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> mean_y, <span class="at">color =</span> grp),</span>
+<span id="cb22-54"><a href="#cb22-54" aria-hidden="true" tabindex="-1"></a>              <span class="at">inherit.aes =</span> <span class="cn">FALSE</span>, <span class="at">linewidth =</span> <span class="fl">1.05</span>)</span>
+<span id="cb22-55"><a href="#cb22-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-56"><a href="#cb22-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pstyle_fx</span>(g, title <span class="sc">%||%</span> <span class="fu">paste0</span>(<span class="st">"ICE: "</span>, var, <span class="st">" by "</span>, by), <span class="at">xlab =</span> var, <span class="at">ylab =</span> <span class="st">"Predicted Y"</span>)</span>
+<span id="cb22-57"><a href="#cb22-57" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="accumulated-local-effects-ale-plots" class="level2" data-number="3.7">
+<h2 data-number="3.7" class="anchored" data-anchor-id="accumulated-local-effects-ale-plots"><span class="header-section-number">3.7</span> Accumulated Local Effects (ALE) plots</h2>
+<p>ALE curves summarize local effects and are often more reliable than PDP when features are correlated.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- ALE (no extra packages) ----</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>plot_ale <span class="ot">&lt;-</span> <span class="cf">function</span>(model, data, var, <span class="at">grid.size =</span> <span class="dv">40</span>, <span class="at">title =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  qs <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">quantile</span>(data[[var]], <span class="at">probs =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="at">length.out =</span> grid.size), <span class="at">names =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  mids <span class="ot">&lt;-</span> (qs[<span class="sc">-</span><span class="dv">1</span>] <span class="sc">+</span> qs[<span class="sc">-</span><span class="fu">length</span>(qs)]) <span class="sc">/</span> <span class="dv">2</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  delta <span class="ot">&lt;-</span> <span class="fu">numeric</span>(<span class="fu">length</span>(qs) <span class="sc">-</span> <span class="dv">1</span>)</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (k <span class="cf">in</span> <span class="fu">seq_len</span>(<span class="fu">length</span>(delta))) {</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    low  <span class="ot">&lt;-</span> qs[k]; high <span class="ot">&lt;-</span> qs[k <span class="sc">+</span> <span class="dv">1</span>]</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    idx <span class="ot">&lt;-</span> <span class="fu">which</span>(data[[var]] <span class="sc">&gt;=</span> low <span class="sc">&amp;</span> data[[var]] <span class="sc">&lt;</span> high)</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">length</span>(idx)) {</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>      dat_low  <span class="ot">&lt;-</span> data[idx, ];  dat_low[[var]]  <span class="ot">&lt;-</span> low</span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>      dat_high <span class="ot">&lt;-</span> data[idx, ]; dat_high[[var]] <span class="ot">&lt;-</span> high</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>      delta[k] <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">predict</span>(model, dat_high) <span class="sc">-</span> <span class="fu">predict</span>(model, dat_low))</span>
+<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>      delta[k] <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>  ale <span class="ot">&lt;-</span> <span class="fu">cumsum</span>(delta)</span>
+<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>  ale <span class="ot">&lt;-</span> ale <span class="sc">-</span> <span class="fu">mean</span>(ale)</span>
+<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>  g <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="fu">tibble</span>(<span class="at">x =</span> mids, <span class="at">y =</span> ale), <span class="fu">aes</span>(x, y)) <span class="sc">+</span></span>
+<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="fl">1.1</span>)</span>
+<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pstyle_fx</span>(g, title <span class="sc">%||%</span> <span class="fu">paste0</span>(<span class="st">"ALE: "</span>, var), <span class="at">xlab =</span> var, <span class="at">ylab =</span> <span class="st">"Accumulated local effect"</span>)</span>
+<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ICE / ALE for the spline model</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>ice_x1 <span class="ot">&lt;-</span> <span class="fu">plot_ice</span>(lm_spline, dat, <span class="st">"X1"</span>, <span class="at">grid.size =</span> <span class="dv">60</span>, <span class="at">title =</span> <span class="st">"ICE: X1 (Spline-LM)"</span>)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>ice_x2 <span class="ot">&lt;-</span> <span class="fu">plot_ice</span>(lm_spline, dat, <span class="st">"X2"</span>, <span class="at">grid.size =</span> <span class="dv">60</span>, <span class="at">title =</span> <span class="st">"ICE: X2 (Spline-LM)"</span>)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>ale_x1 <span class="ot">&lt;-</span> <span class="fu">plot_ale</span>(lm_spline, dat, <span class="st">"X1"</span>, <span class="at">grid.size =</span> <span class="dv">40</span>, <span class="at">title =</span> <span class="st">"ALE: X1 (Spline-LM)"</span>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>ale_x2 <span class="ot">&lt;-</span> <span class="fu">plot_ale</span>(lm_spline, dat, <span class="st">"X2"</span>, <span class="at">grid.size =</span> <span class="dv">40</span>, <span class="at">title =</span> <span class="st">"ALE: X2 (Spline-LM)"</span>)</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>ice_x2_byx3 <span class="ot">&lt;-</span> <span class="fu">plot_ice_by</span>(lm_spline, dat, <span class="at">var =</span> <span class="st">"X2"</span>, <span class="at">by =</span> <span class="st">"X3"</span>, <span class="at">grid.size =</span> <span class="dv">60</span>,</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>                           <span class="at">title =</span> <span class="st">"ICE: X2 by X3 (Spline-LM)"</span>)                        </span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>ice_x1_byx3 <span class="ot">&lt;-</span> <span class="fu">plot_ice_by</span>(lm_spline, dat, <span class="at">var =</span> <span class="st">"X1"</span>, <span class="at">by =</span> <span class="st">"X3"</span>, <span class="at">grid.size =</span> <span class="dv">60</span>,</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>                           <span class="at">title =</span> <span class="st">"ICE: X1 by X3 (Spline-LM)"</span>)                           </span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Arrange like your PDP grid</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>(ice_x1 <span class="sc">|</span> ice_x2) <span class="sc">/</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>(ale_x1 <span class="sc">|</span> ale_x2)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="02-partial-effect-plots_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Show the grouped ICE as well</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>ice_x1_byx3</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="02-partial-effect-plots_files/figure-html/unnamed-chunk-10-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>ice_x2_byx3</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="02-partial-effect-plots_files/figure-html/unnamed-chunk-10-3.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ICE for RF</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>ice_rf_x1 <span class="ot">&lt;-</span> <span class="fu">plot_ice</span>(rf,  dat, <span class="st">"X1"</span>, <span class="at">grid.size =</span> <span class="dv">60</span>, <span class="at">title =</span> <span class="st">"ICE: X1 (Random Forest)"</span>)</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>ice_rf_x2 <span class="ot">&lt;-</span> <span class="fu">plot_ice</span>(rf,  dat, <span class="st">"X2"</span>, <span class="at">grid.size =</span> <span class="dv">60</span>, <span class="at">title =</span> <span class="st">"ICE: X2 (Random Forest)"</span>)</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="co"># ICE by X3 for RF</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>ice_rf_x1_byx3 <span class="ot">&lt;-</span> <span class="fu">plot_ice_by</span>(rf, dat, <span class="at">var =</span> <span class="st">"X1"</span>, <span class="at">by =</span> <span class="st">"X3"</span>, <span class="at">grid.size =</span> <span class="dv">60</span>,</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>                              <span class="at">title =</span> <span class="st">"ICE: X1 by X3 (Random Forest)"</span>)</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>ice_rf_x2_byx3 <span class="ot">&lt;-</span> <span class="fu">plot_ice_by</span>(rf, dat, <span class="at">var =</span> <span class="st">"X2"</span>, <span class="at">by =</span> <span class="st">"X3"</span>, <span class="at">grid.size =</span> <span class="dv">60</span>,</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>                              <span class="at">title =</span> <span class="st">"ICE: X2 by X3 (Random Forest)"</span>)</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a><span class="co"># ALE for RF</span></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>ale_rf_x1 <span class="ot">&lt;-</span> <span class="fu">plot_ale</span>(rf,  dat, <span class="st">"X1"</span>, <span class="at">grid.size =</span> <span class="dv">40</span>, <span class="at">title =</span> <span class="st">"ALE: X1 (Random Forest)"</span>)</span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>ale_rf_x2 <span class="ot">&lt;-</span> <span class="fu">plot_ale</span>(rf,  dat, <span class="st">"X2"</span>, <span class="at">grid.size =</span> <span class="dv">40</span>, <span class="at">title =</span> <span class="st">"ALE: X2 (Random Forest)"</span>)</span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Arrange with patchwork (optional) ---</span></span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Side-by-side ICE and ALE for RF</span></span>
+<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a>(ice_rf_x1 <span class="sc">|</span> ice_rf_x2) <span class="sc">/</span></span>
+<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a>(ale_rf_x1 <span class="sc">|</span> ale_rf_x2)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="02-partial-effect-plots_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Grouped ICE by X3</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>ice_rf_x1_byx3</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="02-partial-effect-plots_files/figure-html/unnamed-chunk-11-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>ice_rf_x2_byx3</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="02-partial-effect-plots_files/figure-html/unnamed-chunk-11-3.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
