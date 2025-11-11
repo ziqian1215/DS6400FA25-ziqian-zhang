@@ -1,0 +1,720 @@
+# 4 Models
+
+## Generalized Linear Model (GLM)
+
+### Motivating Ideas
+
+The **Generalized Linear Model (GLM)** represents a major unifying step in the history of statistics.  
+Before 1972, researchers used a collection of specialized methods for different kinds of data:
+
+- **Continuous data:** Multiple linear regression (Normal distribution, identity link)  
+- **Group mean comparisons:** ANOVA (Normal distribution, identity link)  
+- **Binary data:** Logistic or probit regression (Binomial distribution, logit/probit link)  
+- **Count data:** Poisson regression (Poisson distribution, log link)
+
+Each model had its own estimation rules and assumptions.  
+Nelder and Wedderburn (1972) proposed GLMs as a **single framework** that could describe all of these models through three shared components:
+
+1. **A random component:**  
+   The response variable $Y_i$ follows a distribution from the *exponential family* (e.g., Normal, Binomial, Poisson, Gamma).
+
+2. **A systematic component:**  
+   Predictors enter linearly through  
+   $$ 
+   \eta_i = \mathbf{x}_i^\top \boldsymbol{\beta}.
+   $$
+
+3. **A link function:**  
+   Connects the expected value $\mu_i = E[Y_i]$ to the linear predictor:  
+   $$
+   g(\mu_i) = \eta_i.
+   $$
+
+With this formulation, the same estimation algorithm — **Iteratively Reweighted Least Squares (IRLS)** — can be used across models.  
+GLMs thus generalized linear regression to non-normal data while keeping the interpretability of regression coefficients.
+
+
+### Chronology of Key Ideas
+
+Adapted from Lindsey’s summary of *McCullagh & Nelder* (who themselves drew from *Stiegler*), the historical path toward GLMs developed gradually:
+
+| Period | Development | Distribution & Link | Key Contributors |
+|:-------|:-------------|:--------------------|:------------------|
+| **Early 19th century** | Multiple linear regression — foundation of least squares. | Normal, identity | Legendre, Gauss |
+| **1920s–1935** | ANOVA formalized — partitioning of variance. | Normal, identity | Fisher |
+| **1922** | Likelihood function introduced — general approach to inference. | Any | Fisher |
+| **1922** | Dilution assays for dose–response data. | Binomial, complementary log–log | Fisher |
+| **1934** | Exponential family identified — distributions with sufficient statistics. | — | Fisher |
+| **1935** | Probit analysis for quantal response data. | Binomial, probit | Bliss |
+| **1944–1952** | Logit model for proportions. | Binomial, logit | Berkson; Dyke & Patterson |
+| **1960** | Item response theory (Rasch model). | Bernoulli, logit | Rasch |
+| **1963** | Log-linear models for count data. | Poisson, log | Birch |
+| **1965–1967** | Regression models for survival data. | Exponential, log or reciprocal | Feigl & Zelen; Zippin & Armitage; Glasser |
+| **1966** | Inverse polynomials extended regression to Gamma data. | Gamma, reciprocal | Nelder |
+| **1972** | *Generalized Linear Models* unified all the above under one theory and algorithm. | Exponential family, general link | Nelder & Wedderburn |
+
+
+## Conceptual Unification
+
+By the early 1970s, it became clear that many well-known models were specific cases of a broader principle.  
+Nelder and Wedderburn (1972) formally expressed this as:
+
+$$
+g(\mu_i) = \mathbf{x}_i^\top \boldsymbol{\beta}, \quad
+Y_i \sim \text{Exponential Family}(\mu_i, \phi)
+$$
+
+Their key insight:
+
+- All these models (linear, logistic, Poisson, Gamma, etc.) share the same likelihood structure.  
+- They can all be estimated through the **same maximum-likelihood algorithm**.  
+- Diagnostics, residuals, and hypothesis tests could be made consistent across model types.
+
+In short, GLMs provided the long-sought **unification of statistical modeling**, bringing together 150 years of development—from **Gauss’s least squares** and **Fisher’s likelihood theory** to **modern regression frameworks**.
+
+
+## References
+
+- Legendre, A. M. (1805). *Nouvelles méthodes pour la détermination des orbites des comètes.*  
+- Gauss, C. F. (1809). *Theoria motus corporum coelestium in sectionibus conicis solem ambientium.*  
+- Fisher, R. A. (1922). *On the mathematical foundations of theoretical statistics.* *Philosophical Transactions of the Royal Society A.*  
+- Bliss, C. I. (1935). *The method of probits.* *Science*, 79(2037), 38–39.  
+- Berkson, J. (1944). *Application of the logistic function to bio-assay.* *JASA*, 39(227), 357–365.  
+- Rasch, G. (1960). *Probabilistic models for some intelligence and attainment tests.*  
+- Birch, M. W. (1963). *Maximum likelihood in three-way contingency tables.* *JASA*, 58, 1071–1081.  
+- Feigl, P., & Zelen, M. (1965). *Estimation of exponential survival probabilities with concomitant information.* *Biometrics*, 21, 826–838.  
+- Nelder, J. A., & Wedderburn, R. W. M. (1972). *Generalized Linear Models.* *JRSS A*, 135(3), 370–384.  
+- McCullagh, P., & Nelder, J. A. (1989). *Generalized Linear Models* (2nd ed.). Chapman & Hall.  
+- Lindsey, J. K. (1997). *Applying Generalized Linear Models.* Springer.  
+
+## Expressing the GLM Mathematically
+
+A **single-parameter exponential family** can be expressed as:
+
+$$
+f_X(x \mid \theta)
+= h(x)\,\exp\!\left[\eta(\theta)\,T(x) - A(\theta)\right],
+$$
+
+or equivalently,
+
+$$
+\log f_X(x \mid \theta)
+= \eta(\theta)\,T(x) - A(\theta) + B(x).
+$$
+
+### Components
+
+| Symbol | Role | GLM Interpretation |
+|:--------|:------|:------------------|
+| $$T(x)$$ | Sufficient statistic | Response variable $$Y_i$$ |
+| $$h(x)$$ or $$B(x)$$ | Base measure | Constant term $$c(y_i, \phi)$$ |
+| $$\eta(\theta)$$ | Natural (canonical) parameter | Linear predictor $$\eta_i = X_i^\top \beta$$ under canonical link |
+| $$A(\theta)$$ | Cumulant (log-partition) function | Determines mean and variance |
+| $$\theta$$ | Model parameter | Canonical parameter of the distribution |
+
+For any exponential-family member:
+
+$$
+\mathbb{E}[T(X)] = A'(\theta),
+$$
+
+$$
+\mathrm{Var}[T(X)] = A''(\theta).
+$$
+
+Thus, for GLMs:
+
+$$
+\mu_i = \mathbb{E}[Y_i] = A'(\theta_i),
+$$
+
+$$
+\mathrm{Var}(Y_i) = a(\phi) A''(\theta_i),
+$$
+
+and the **link function** connects the mean to the predictors:
+
+$$
+g(\mu_i) = \eta_i = X_i^\top \beta.
+$$
+
+If the link is canonical, then:
+
+$$
+g(\mu_i) = \theta_i.
+$$
+
+---
+
+### Binomial Distribution (Logistic GLM)
+
+$$
+Y_i \sim \text{Binomial}(n_i, p_i)
+$$
+
+For simplicity, we often take $$n_i = 1$$ so that:
+
+$$
+Y_i \sim \text{Binomial}(1, p_i).
+$$
+
+The probability mass function is:
+
+$$
+f_Y(y_i \mid p_i) = \binom{n_i}{y_i} p_i^{y_i} (1 - p_i)^{n_i - y_i}.
+$$
+
+This can be written in exponential-family form:
+
+$$
+f_Y(y_i \mid \theta_i)
+= h(y_i)\,\exp\!\left[y_i \theta_i - A(\theta_i)\right],
+$$
+
+where:
+
+$$
+\theta_i = \log\!\frac{p_i}{1 - p_i},
+$$
+
+$$
+A(\theta_i) = n_i \log(1 + e^{\theta_i}),
+$$
+
+$$
+h(y_i) = \binom{n_i}{y_i}.
+$$
+
+Then the mean and variance follow from derivatives of $$A(\theta_i)$$:
+
+$$
+\mu_i = A'(\theta_i) = n_i \frac{e^{\theta_i}}{1 + e^{\theta_i}} = n_i p_i,
+$$
+
+$$
+\mathrm{Var}(Y_i) = A''(\theta_i) = n_i p_i (1 - p_i).
+$$
+
+The **canonical link function** is the logit:
+
+$$
+g(p_i) = \log\!\frac{p_i}{1 - p_i} = \eta_i = X_i^\top \beta,
+$$
+
+and the **inverse link** (mean function) is:
+
+$$
+p_i = \frac{e^{\eta_i}}{1 + e^{\eta_i}}.
+$$
+
+---
+
+### Poisson Distribution (Log-linear GLM)
+
+$$
+Y_i \sim \text{Poisson}(\lambda_i)
+$$
+
+The probability mass function is:
+
+$$
+f_Y(y_i \mid \lambda_i) = \frac{\lambda_i^{y_i} e^{-\lambda_i}}{y_i!}.
+$$
+
+This can be expressed in exponential-family form:
+
+$$
+f_Y(y_i \mid \theta_i)
+= h(y_i)\,\exp\!\left[y_i \theta_i - A(\theta_i)\right],
+$$
+
+where:
+
+$$
+\theta_i = \log \lambda_i,
+$$
+
+$$
+A(\theta_i) = e^{\theta_i},
+$$
+
+$$
+h(y_i) = \frac{1}{y_i!}.
+$$
+
+From these we derive:
+
+$$
+\mu_i = A'(\theta_i) = e^{\theta_i} = \lambda_i,
+$$
+
+$$
+\mathrm{Var}(Y_i) = A''(\theta_i) = e^{\theta_i} = \lambda_i.
+$$
+
+The **canonical link** is the log link:
+
+$$
+g(\mu_i) = \log \mu_i = \eta_i = X_i^\top \beta,
+$$
+
+and the **inverse link** is:
+
+$$
+\mu_i = e^{\eta_i}.
+$$
+
+If we model **rates** with exposure $$E_i$$:
+
+$$
+\log \lambda_i = \log E_i + X_i^\top \beta,
+$$
+
+or equivalently:
+
+$$
+\lambda_i = E_i\,e^{X_i^\top \beta}.
+$$
+
+---
+
+### Summary Table
+
+| Distribution | Canonical Parameter $$\theta$$ | Cumulant $$A(\theta)$$ | Mean $$A'(\theta)$$ | Variance $$A''(\theta)$$ | Canonical Link |
+|---------------|--------------------------------|-------------------------|---------------------|---------------------------|----------------|
+| $$Y_i \sim \text{Binomial}(1, p_i)$$ | $$\log\frac{p_i}{1-p_i}$$ | $$\log(1 + e^{\theta})$$ | $$p_i$$ | $$p_i(1 - p_i)$$ | Logit |
+| $$Y_i \sim \text{Poisson}(\lambda_i)$$ | $$\log \lambda_i$$ | $$e^{\theta}$$ | $$\lambda_i$$ | $$\lambda_i$$ | Log |
+
+---
+
+### What We Will Demonstrate in Code
+
+1. **Simulate Data**
+
+   - Binomial: $$Y_i \sim \text{Binomial}(1, p_i)$$  
+   - Poisson: $$Y_i \sim \text{Poisson}(\lambda_i)$$
+
+2. **Fit GLMs with Canonical Links**
+
+   - Logistic GLM: $$g(p_i) = \log\frac{p_i}{1-p_i}$$  
+   - Poisson GLM: $$g(\lambda_i) = \log \lambda_i$$
+
+3. **Verify Theoretical Relationships**
+
+   - Mean: $$\mu_i = A'(\theta_i)$$  
+   - Variance: $$\mathrm{Var}(Y_i) = A''(\theta_i)$$  
+   - Canonical link linearity: $$g(\mu_i) = X_i^\top \beta$$
+
+4. **Visualize Results**
+
+   - Predicted vs observed $$Y_i$$  
+   - Inverse-link response curves $$g^{-1}(\eta_i)$$  
+   - Deviance and residual diagnostics
+
+## Code
+```{r}
+set.seed(1)
+n  <- 500
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+eta <- -0.5 + 1.1*x1 - 0.8*x2
+p   <- plogis(eta)
+y   <- rbinom(n, size = 1, prob = p)
+
+df <- data.frame(y, x1, x2)
+
+m_logit <- glm(y ~ x1 + x2, data = df, family = binomial())
+summary(m_logit)
+
+# Effect curve for x1 (x2 fixed at 0), with 95% CI on response scale
+library(ggplot2)
+xgrid <- data.frame(x1 = seq(-3, 3, length.out = 200), x2 = 0)
+pred  <- predict(m_logit, newdata = xgrid, type = "link", se.fit = TRUE)
+eta_hat <- pred$fit
+se_eta  <- pred$se.fit
+p_hat   <- plogis(eta_hat)
+lo      <- plogis(eta_hat - 1.96*se_eta)
+hi      <- plogis(eta_hat + 1.96*se_eta)
+
+ggplot() +
+  geom_point(aes(x = x1, y = y), data = df, alpha = 0.25) +
+  geom_line(aes(x = xgrid$x1, y = p_hat), linewidth = 1) +
+  geom_ribbon(aes(x = xgrid$x1, ymin = lo, ymax = hi), alpha = 0.2) +
+  labs(title = "Binomial GLM (logit): effect of x1 | x2=0",
+       x = "x1", y = "P(Y=1)") +
+  theme_minimal()
+
+# Quick residual check
+plot(fitted(m_logit), residuals(m_logit, type = "deviance"),
+     xlab = "Fitted probability", ylab = "Deviance residual",
+     main = "Logistic GLM: residuals vs fitted")
+abline(h = 0, lty = 2)
+
+```
+```{r}
+set.seed(2)
+n  <- 500
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+E  <- runif(n, 0.5, 2.5)                # exposure
+eta <- 0.2 + 0.5*x1 + 0.6*x2 + log(E)   # include offset in DGP
+lambda <- exp(eta)
+y  <- rpois(n, lambda)
+
+dfp <- data.frame(y, x1, x2, E)
+
+m_pois <- glm(y ~ x1 + x2 + offset(log(E)), data = dfp, family = poisson())
+summary(m_pois)
+
+# Effect curve for x1 (x2 = 0, E = 1), with 95% CI on mean scale
+library(ggplot2)
+xgrid <- data.frame(x1 = seq(-3, 3, length.out = 200), x2 = 0, E = 1)
+pred  <- predict(m_pois, newdata = xgrid, type = "link", se.fit = TRUE)
+eta_hat <- pred$fit
+se_eta  <- pred$se.fit
+mu_hat  <- exp(eta_hat)
+lo      <- exp(eta_hat - 1.96*se_eta)
+hi      <- exp(eta_hat + 1.96*se_eta)
+
+ggplot() +
+  geom_point(aes(x = x1, y = y/E), data = dfp, alpha = 0.25) +
+  geom_line(aes(x = xgrid$x1, y = mu_hat), linewidth = 1) +
+  geom_ribbon(aes(x = xgrid$x1, ymin = lo, ymax = hi), alpha = 0.2) +
+  labs(title = "Poisson GLM (log): effect of x1 | x2=0, E=1",
+       x = "x1", y = "Rate (λ)") +
+  theme_minimal()
+
+# Quick residual check + overdispersion diagnostic
+plot(fitted(m_pois), residuals(m_pois, type = "deviance"),
+     xlab = "Fitted mean λ", ylab = "Deviance residual",
+     main = "Poisson GLM: residuals vs fitted")
+abline(h = 0, lty = 2)
+```
+
+## Ordinal Regression (Proportional Odds)
+
+We observe a response $ Y $ ordinal, or a finely discretized/continuous outcome) and predictors $ x \in \mathbb{R}^p$ .  
+We want to model the **conditional cumulative distribution function (CDF)**
+
+$$
+F(y \mid x) = P(Y \le y \mid x).
+$$
+
+Following Liu et al. (2017), we use a **cumulative probability model (CPM)**, which is the same mathematical structure as an ordinal / proportional odds regression.
+$$
+g\big( P(Y \le y \mid x) \big)
+= \alpha(y) - x^\top \beta,
+\tag{1}
+$$
+where
+
+$$ g(\cdot) $$ is a link function (logit, probit, loglog, cloglog),
+$$ \alpha(y) $$ is a nondecreasing function of the cutpoint $$ y $$ (it plays the role of ordered thresholds),
+$$ \beta $$ is a single vector of regression coefficients shared across all cutpoints (this is the **proportional** / **parallel slopes** assumption).
+
+This is the form used in Liu et al. (2017), *Modeling continuous response variables using ordinal regression*.
+
+Suppose $$Y \in \{1,2,\dots,K\}.$$  
+Define $$\theta_k = \alpha(k)$$ for $$k=1,\dots,K-1.$$  
+Then (1) becomes the standard cumulative link / proportional odds model
+
+$$
+g\big( P(Y \le k \mid x) \big)
+= \theta_k - x^\top \beta, \quad k = 1, \dots, K-1.
+$$
+
+### Choice of link 
+
+- **logit:**  
+  $$
+  g(p) = \log\frac{p}{1-p}, \qquad
+  g^{-1}(y) = \frac{e^{y}}{1+e^{y}}
+  $$
+- **probit:**  
+  $$
+  g(p) = \Phi^{-1}(p), \qquad
+  g^{-1}(y) = \Phi(y)
+  $$
+- **loglog:**  
+  $$
+  g(p) = -\log\big(-\log(p)\big), \qquad
+  g^{-1}(y) = \exp\big[-\exp(-y)\big]
+  $$
+- **cloglog:**  
+  $$
+  g(p) = \log\big[-\log(1-p)\big], \qquad
+  g^{-1}(y) = 1 - \exp\big[-\exp(y)\big]
+  $$
+
+Here, $$\Phi(\cdot)$$ is the CDF of the standard normal distribution.
+
+
+Let
+$$
+\pi_k(x) = P(Y = k \mid x), \quad k=1,\dots,K.
+$$
+
+From the cumulative probabilities:
+$$
+\begin{aligned}
+P(Y = 1 \mid x) &= P(Y \le 1 \mid x), \\
+P(Y = k \mid x) &= P(Y \le k \mid x) - P(Y \le k-1 \mid x), \quad k=2,\dots,K-1, \\
+P(Y = K \mid x) &= 1 - P(Y \le K-1 \mid x).
+\end{aligned}
+$$
+
+So with the logit link, the full model is
+
+$$
+\log \frac{P(Y \le k \mid x)}{1 - P(Y \le k \mid x)}
+= \theta_k - x^\top \beta, \quad k=1,\dots,K-1,
+$$
+and the $$\pi_k(x)$$ are obtained by the above expressions.
+
+### Interpretation
+
+$\beta$ describes how a one-unit change in a predictor shifts the **entire** conditional distribution of $Y$. $\theta_k$ locate the cutpoints between ordered categories. Using different links corresponds to assuming different latent error distributions, as listed in the paper.
+
+## Neural Net
+
+### McCulloch–Pitts Neuron (1943)
+
+#### Model Description
+A neuron fires if it receives enough excitatory input and no inhibitory input.
+
+Let  
+- $v_i(t) \in \{0,1\}$$ activation (firing) state of neuron $i$ at time $t$,  
+- $E_i$: set of excitatory inputs,  
+- $I_i$: set of inhibitory inputs,  
+- $T_i$: excitatory threshold.
+
+#### Model Equation
+$$
+v_i(t+1) =
+\begin{cases}
+1, & \text{if } \displaystyle \sum_{j \in E_i} v_j(t) \ge T_i \text{ and } \sum_{k \in I_i} v_k(t) = 0, \\[6pt]
+0, & \text{otherwise.}
+\end{cases}
+$$
+
+This is a logical threshold model — the first formal mathematical neuron, but without a learning rule.
+
+### Rosenblatt Perceptron (1958)
+
+#### Model Description
+A single-layer learnable threshold unit for classification.
+
+Let  
+- Input vector $x \in \mathbb{R}^d$,  
+- Weight vector $w \in \mathbb{R}^d$,  
+- Bias $b$,  
+- Target label $t \in \{0,1\}$.
+
+#### Forward Function
+$$
+y =
+\begin{cases}
+1, & \text{if } w^\top x + b \ge 0, \\[4pt]
+0, & \text{if } w^\top x + b < 0.
+\end{cases}
+$$
+
+or equivalently
+
+$$
+y = \mathbf{1}\{w^\top x + b \ge 0\}.
+$$
+
+#### Learning Rule
+Given a learning rate \(\eta > 0\):
+
+$$
+w \leftarrow w + \eta (t - y) x, \qquad
+b \leftarrow b + \eta (t - y).
+$$
+
+If the perceptron predicts incorrectly, the weights shift toward or away from the input vector to correct the error.
+
+### Rumelhart–Hinton–Williams Backpropagation Network (1986)
+A multilayer feedforward network trained by gradient descent.
+
+Let  
+- Layer index $\ell = 1, 2, \dots, L$,  
+- Activations $a_j^{(\ell)}$,  
+- Net inputs $z_j^{(\ell)}$,  
+- Weights $w_{ij}^{(\ell)}$,  
+- Biases $b_j^{(\ell)}$.
+
+#### Forward Pass
+For the input layer:
+$$
+a_j^{(1)} = x_j.
+$$
+
+For each hidden or output layer:
+$$
+z_j^{(\ell)} = \sum_i w_{ij}^{(\ell)} a_i^{(\ell-1)} + b_j^{(\ell)}, \qquad
+a_j^{(\ell)} = f(z_j^{(\ell)}),
+$$
+where \(f\) is a differentiable activation function (e.g. sigmoid).
+
+The total loss (mean-squared error):
+$$
+E = \frac{1}{2} \sum_k (t_k - a_k^{(L)})^2.
+$$
+
+#### Backward Pass (Error Terms)
+For output layer units:
+$$
+\delta_k^{(L)} = (t_k - a_k^{(L)}) f'(z_k^{(L)}).
+$$
+
+For hidden layer units:
+$$
+\delta_j^{(\ell)} = f'(z_j^{(\ell)}) \sum_k w_{jk}^{(\ell+1)} \delta_k^{(\ell+1)}.
+$$
+
+#### Weight and Bias Updates
+$$
+\Delta w_{ij}^{(\ell)} = \eta \, a_i^{(\ell-1)} \, \delta_j^{(\ell)}, \qquad
+w_{ij}^{(\ell)} \leftarrow w_{ij}^{(\ell)} + \Delta w_{ij}^{(\ell)}.
+$$
+
+$$
+\Delta b_j^{(\ell)} = \eta \, \delta_j^{(\ell)}, \qquad
+b_j^{(\ell)} \leftarrow b_j^{(\ell)} + \Delta b_j^{(\ell)}.
+$$
+
+### Summary Table
+
+| Model | Output Function | Learning Rule |
+|--------|-----------------|----------------|
+| **McCulloch–Pitts (1943)** | $$v_i(t+1)=1$$ if enough excitation and no inhibition | None (fixed logic) |
+| **Rosenblatt (1958)** | $$y=\mathbf{1}\{w^\top x + b \ge 0\}$$ | $$w \leftarrow w + \eta (t-y)x$$ |
+| **Rumelhart et al. (1986)** | $$a_j=f\!\left(\sum_i w_{ij}a_i+b_j\right)$$ | $$\Delta w_{ij}=\eta a_i \delta_j$$ with backpropagation |
+
+
+These three equations trace the mathematical evolution of neural networks:  
+from **logical firing** (McCulloch–Pitts) → **learnable thresholds** (Rosenblatt) → **differentiable, multilayer learning** (Rumelhart–Hinton–Williams).
+
+## Create visualizations of the prediction relationship
+
+```{r}
+#| message: false
+#| warning: false
+library(tidyverse)
+library(nnet)           # for neural net
+library(randomForest)   # for random forest
+library(MASS)           # for polr (ordinal regression)
+set.seed(42)
+n  <- 2000
+X1 <- rnorm(n)
+X2 <- rnorm(n)
+X3 <- rbinom(n, 1, 0.4)
+
+sigmoid <- function(x) 1 / (1 + exp(-x))
+mu <- sqrt(5) * sigmoid(X1 + X3) + sqrt(5) * sigmoid(X2) * X3
+Y  <- mu + rnorm(n, 0, 1)
+
+dat <- tibble(X1, X2, X3 = factor(X3), Y)
+```
+
+```{r}
+#| message: false
+#| warning: false
+library(tidyverse)
+library(nnet)
+library(randomForest)
+library(MASS)
+
+set.seed(42)
+
+# --- models -------------------------------------------------
+glm_fit <- glm(Y ~ X1 + X2 + X3, data = dat, family = gaussian())
+
+dat <- dat %>%
+  mutate(pred_glm = predict(glm_fit))
+
+nn_fit <- nnet(
+  Y ~ X1 + X2 + X3,
+  data   = dat,
+  size   = 5,
+  linout = TRUE,
+  maxit  = 1000,
+  decay  = 1e-4,
+  trace  = FALSE
+)
+
+dat <- dat %>%
+  mutate(pred_nn = as.numeric(predict(nn_fit, dat)))
+
+rf_fit <- randomForest(
+  Y ~ X1 + X2 + X3,
+  data = dat,
+  ntree = 300,
+  importance = TRUE
+)
+
+dat <- dat %>%
+  mutate(pred_rf = predict(rf_fit, dat))
+
+# --- ordinal target -----------------------------------------
+dat <- dat %>%
+  mutate(
+    Y_ord = cut(
+      Y,
+      breaks = quantile(Y, probs = c(0, 0.33, 0.66, 1)),
+      labels = c("Low", "Medium", "High"),
+      include.lowest = TRUE,
+      ordered_result = TRUE
+    )
+  )
+
+ord_fit <- polr(Y_ord ~ X1 + X2 + X3, data = dat, method = "logistic")
+
+dat <- dat %>%
+  mutate(pred_ord = predict(ord_fit, type = "class"))
+
+# --- long format for compare plot ---------------------------
+dat_long <- dat %>%
+  dplyr::select(Y, pred_glm, pred_nn, pred_rf) %>%
+  tidyr::pivot_longer(
+    cols = c(pred_glm, pred_nn, pred_rf),
+    names_to = "model",
+    values_to = "prediction"
+  ) %>%
+  mutate(
+    model = dplyr::recode(
+      model,
+      pred_glm = "GLM",
+      pred_nn  = "Neural Net",
+      pred_rf  = "Random Forest"
+    )
+  )
+
+# --- compare scatter ----------------------------------------
+ggplot(dat_long, aes(x = Y, y = prediction)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  facet_wrap(~ model, nrow = 1) +
+  labs(
+    title = "Observed vs Predicted: Model Comparison",
+    x = "Observed Y",
+    y = "Predicted Y"
+  ) +
+  theme_minimal()
+
+# --- residual density ---------------------------------------
+dat_long %>%
+  mutate(resid = prediction - Y) %>%
+  ggplot(aes(x = resid, fill = model)) +
+  geom_density(alpha = 0.4) +
+  labs(
+    title = "Residual distributions by model",
+    x = "Prediction error (pred - Y)",
+    y = "Density"
+  ) +
+  theme_minimal()
+
+```
