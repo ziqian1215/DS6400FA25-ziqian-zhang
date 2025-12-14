@@ -246,6 +246,14 @@ window.Quarto = {
   <li><a href="#results" id="toc-results" class="nav-link" data-scroll-target="#results"><span class="header-section-number">6.1.4</span> Results</a></li>
   <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary"><span class="header-section-number">6.1.5</span> Summary</a></li>
   </ul></li>
+  <li><a href="#question-2" id="toc-question-2" class="nav-link" data-scroll-target="#question-2"><span class="header-section-number">6.2</span> Question 2</a>
+  <ul class="collapse">
+  <li><a href="#data-and-setup" id="toc-data-and-setup" class="nav-link" data-scroll-target="#data-and-setup"><span class="header-section-number">6.2.1</span> Data and setup</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods"><span class="header-section-number">6.2.2</span> Methods</a></li>
+  <li><a href="#regularization-behavior" id="toc-regularization-behavior" class="nav-link" data-scroll-target="#regularization-behavior"><span class="header-section-number">6.2.3</span> Regularization behavior</a></li>
+  <li><a href="#results-1" id="toc-results-1" class="nav-link" data-scroll-target="#results-1"><span class="header-section-number">6.2.4</span> Results</a></li>
+  <li><a href="#discussion-conclusion" id="toc-discussion-conclusion" class="nav-link" data-scroll-target="#discussion-conclusion"><span class="header-section-number">6.2.5</span> Discussion &amp; Conclusion</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -1126,6 +1134,329 @@ J\bigl(S^{(r)}, S^{(r')}\bigr)
 <p>The blockwise analyses further clarify the interaction between correlation structure and regularization. Highly correlated blocks benefit from shrinkage-based methods, while sparsity-driven methods more accurately identify truly active predictors within moderately correlated blocks. Blocks containing no signal are consistently downweighted, especially by lasso and elastic net, demonstrating effective regularization against overfitting.</p>
 <p>Finally, selection stability results show that elastic net produces more consistent variable selection across resamples than lasso, particularly in correlated blocks, underscoring the practical importance of combining sparsity and grouping effects.</p>
 <p>Taken together, these results emphasize that no single regularization method is uniformly optimal. Instead, the appropriate choice depends on the underlying signal structure, correlation patterns, and the relative importance of prediction accuracy, interpretability, and stability.</p>
+</section>
+</section>
+<section id="question-2" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="question-2"><span class="header-section-number">6.2</span> Question 2</h2>
+<section id="data-and-setup" class="level3" data-number="6.2.1">
+<h3 data-number="6.2.1" class="anchored" data-anchor-id="data-and-setup"><span class="header-section-number">6.2.1</span> Data and setup</h3>
+<p>We consider three data-generating settings to examine regularization and degrees of freedom under different modeling regimes. Two of the settings follow the simulation designs of Mentch and Zhou (2020), while the third corresponds exactly to the block-correlated linear model used in Q1. Model performance is evaluated using out-of-sample mean squared error (MSE).</p>
+<hr>
+<section id="linear-medium-setting-mentch-and-zhou-2020" class="level4" data-number="6.2.1.1">
+<h4 data-number="6.2.1.1" class="anchored" data-anchor-id="linear-medium-setting-mentch-and-zhou-2020"><span class="header-section-number">6.2.1.1</span> Linear Medium setting (Mentch and Zhou, 2020)</h4>
+<p>We consider a sparse linear regression model with <span class="math display">\[
+n = 500, \quad p = 100, \quad s = 5.
+\]</span> The response is generated according to <span class="math display">\[
+Y = X\beta + \varepsilon,
+\]</span> where <span class="math display">\[
+\beta_j =
+\begin{cases}
+1, &amp; j = 1,\dots,s, \\
+0, &amp; j = s+1,\dots,p,
+\end{cases}
+\quad
+\varepsilon \sim \mathcal{N}(0,\sigma^2).
+\]</span> The noise variance <span class="math inline">\(\sigma^2\)</span> is chosen to achieve a fixed signal-to-noise ratio, <span class="math display">\[
+\mathrm{SNR} = \frac{\mathrm{Var}(X\beta)}{\sigma^2}.
+\]</span> This setting represents a regime in which the linear model is correctly specified.</p>
+<hr>
+</section>
+<section id="marsadd-setting-mentch-and-zhou-2020" class="level4" data-number="6.2.1.2">
+<h4 data-number="6.2.1.2" class="anchored" data-anchor-id="marsadd-setting-mentch-and-zhou-2020"><span class="header-section-number">6.2.1.2</span> MARSadd setting (Mentch and Zhou, 2020)</h4>
+<p>To study a nonlinear data-generating mechanism, we consider the MARSadd model with <span class="math display">\[
+n = 500, \quad p = s = 5,
+\]</span> where predictors are sampled independently from <span class="math inline">\(\mathrm{Unif}(0,1)\)</span>)<span class="math inline">\(. The response is generated as\)</span>$ Y = 0.1 + 3X_3 + 2X_4 + X_5 + , (0,^2), $$ with <span class="math inline">\(\sigma^2\)</span> chosen to control the signal-to-noise ratio. This setting introduces nonlinear and interaction effects that cannot be represented by linear models.</p>
+</section>
+<section id="block-correlated-linear-setting-q1" class="level4" data-number="6.2.1.3">
+<h4 data-number="6.2.1.3" class="anchored" data-anchor-id="block-correlated-linear-setting-q1"><span class="header-section-number">6.2.1.3</span> Block-correlated linear setting (Q1)</h4>
+<p>The third setting follows exactly the block-correlated linear data-generating process used in <strong>Q1</strong>. Predictors are partitioned into blocks with different within-block correlation structures, and the response is generated according to a sparse linear model with additive Gaussian noise. All aspects of this setting are identical to Q1 and are not repeated here.</p>
+</section>
+<section id="traintest-split" class="level4" data-number="6.2.1.4">
+<h4 data-number="6.2.1.4" class="anchored" data-anchor-id="traintest-split"><span class="header-section-number">6.2.1.4</span> Train–test split</h4>
+<p>For each setting, the data are randomly split into training and test sets. Models are fit on the training data, and predictive performance is evaluated on the test data using mean squared error. Results are averaged over repeated fits at each regularization level to reduce Monte Carlo variability.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MASS)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmnet)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ranger)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>gen_linear_medium <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">n =</span> <span class="dv">500</span>, <span class="at">p =</span> <span class="dv">100</span>, <span class="at">s =</span> <span class="dv">5</span>, <span class="at">snr =</span> <span class="dv">1</span>, <span class="at">seed =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(seed)) <span class="fu">set.seed</span>(seed)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">runif</span>(n <span class="sc">*</span> p), n, p)   <span class="co"># same "Unif(0,1)" style</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  beta <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="dv">1</span>, s), <span class="fu">rep</span>(<span class="dv">0</span>, p <span class="sc">-</span> s))</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  f <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(X <span class="sc">%*%</span> beta)</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># choose sigma^2 to hit target SNR = Var(f)/sigma^2</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  sigma2 <span class="ot">&lt;-</span> <span class="fu">var</span>(f) <span class="sc">/</span> snr</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> f <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fu">sqrt</span>(sigma2))</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">X =</span> X, <span class="at">y =</span> y, <span class="at">name =</span> <span class="fu">sprintf</span>(<span class="st">"Linear Medium (n=%d,p=%d,s=%d,SNR=%g)"</span>, n, p, s, snr))</span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>gen_marsadd <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">n =</span> <span class="dv">500</span>, <span class="at">snr =</span> <span class="dv">1</span>, <span class="at">seed =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(seed)) <span class="fu">set.seed</span>(seed)</span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="dv">5</span></span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">runif</span>(n <span class="sc">*</span> p), n, p)</span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>  <span class="co"># One common "MARSadd" style nonlinear signal (matches the spirit of the paper)</span></span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>  f <span class="ot">&lt;-</span> <span class="fl">0.1</span> <span class="sc">*</span> <span class="fu">exp</span>(<span class="dv">4</span> <span class="sc">*</span> X[, <span class="dv">1</span>]) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="fu">exp</span>(<span class="sc">-</span><span class="dv">20</span> <span class="sc">*</span> (X[, <span class="dv">2</span>] <span class="sc">-</span> <span class="fl">0.5</span>))) <span class="sc">+</span></span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>       <span class="dv">3</span> <span class="sc">*</span> X[, <span class="dv">3</span>] <span class="sc">+</span> <span class="dv">2</span> <span class="sc">*</span> X[, <span class="dv">4</span>] <span class="sc">+</span> <span class="dv">1</span> <span class="sc">*</span> X[, <span class="dv">5</span>]</span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>  sigma2 <span class="ot">&lt;-</span> <span class="fu">var</span>(f) <span class="sc">/</span> snr</span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> f <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fu">sqrt</span>(sigma2))</span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">X =</span> X, <span class="at">y =</span> y, <span class="at">name =</span> <span class="fu">sprintf</span>(<span class="st">"MARSadd (n=%d,p=5,SNR=%g)"</span>, n, snr))</span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+</section>
+<section id="methods" class="level3" data-number="6.2.2">
+<h3 data-number="6.2.2" class="anchored" data-anchor-id="methods"><span class="header-section-number">6.2.2</span> Methods</h3>
+<p>We compare ridge regression and random forests under varying levels of regularization. For each method, we examine how regularization affects effective degrees of freedom and out-of-sample predictive accuracy.</p>
+<hr>
+<section id="ridge-regression" class="level4" data-number="6.2.2.1">
+<h4 data-number="6.2.2.1" class="anchored" data-anchor-id="ridge-regression"><span class="header-section-number">6.2.2.1</span> Ridge regression</h4>
+<p>Ridge regression estimates regression coefficients by solving <span class="math display">\[
+\hat{\beta}_\lambda
+= \arg\min_{\beta}
+\left\{
+\|y - X\beta\|_2^2 + \lambda \|\beta\|_2^2
+\right\},
+\]</span> where <span class="math inline">\(\lambda &gt; 0\)</span> is the regularization parameter. Larger values of <span class="math inline">\(\lambda\)</span> impose stronger shrinkage and reduce model complexity.</p>
+<p>For ridge regression, the effective degrees of freedom admit a closed-form expression. Let <span class="math inline">\(d_1,\dots,d_p\)</span> denote the singular values of the standardized design matrix <span class="math inline">\(X\)</span>. The degrees of freedom are given by <span class="math display">\[
+\mathrm{DoF}_{\text{ridge}}(\lambda)
+= \sum_{j=1}^p \frac{d_j^2}{d_j^2 + \lambda}.
+\]</span> This quantity can be interpreted as the effective number of parameters used by the model.</p>
+</section>
+<section id="random-forests" class="level4" data-number="6.2.2.2">
+<h4 data-number="6.2.2.2" class="anchored" data-anchor-id="random-forests"><span class="header-section-number">6.2.2.2</span> Random forests</h4>
+<p>Random forests are ensembles of decision trees constructed using bootstrap samples and randomized splitting rules. Following Mentch and Zhou (2020), we treat the number of candidate predictors considered at each split, denoted <code>mtry</code>, as a regularization parameter. Smaller values of <code>mtry</code> restrict the set of allowable splits and lead to stronger regularization, while larger values increase model flexibility.</p>
+<p>Degrees of freedom for random forests are defined in terms of the sensitivity of fitted values to perturbations in the response: <span class="math display">\[
+\mathrm{DoF}_{\text{RF}}
+= \sum_{i=1}^n \frac{\partial \hat{y}_i}{\partial y_i}.
+\]</span> Because this quantity is not available in closed form, it is estimated using a Monte Carlo perturbation approach. Specifically, for a small perturbation vector <span class="math inline">\(\omega\)</span>, <span class="math display">\[
+\mathrm{DoF}_{\text{RF}}
+\approx \mathbb{E}\left[
+\frac{(\hat{f}(y+\omega) - \hat{f}(y))^\top \omega}{\|\omega\|_2^2}
+\right],
+\]</span> where the expectation is approximated by repeated random perturbations.</p>
+<hr>
+</section>
+<section id="model-evaluation" class="level4" data-number="6.2.2.3">
+<h4 data-number="6.2.2.3" class="anchored" data-anchor-id="model-evaluation"><span class="header-section-number">6.2.2.3</span> Model evaluation</h4>
+<p>For each data-generating setting, models are fit on a training set and evaluated on a held-out test set. Predictive accuracy is measured using test mean squared error (MSE). To reduce Monte Carlo variability arising from random forest fitting and the estimation of degrees of freedom, model fitting is repeated multiple times at each regularization level, and results are summarized using average test MSE and average degrees of freedom.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>ridge_df <span class="ot">&lt;-</span> <span class="cf">function</span>(X, lambda) {</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  Xs <span class="ot">&lt;-</span> <span class="fu">scale</span>(X, <span class="at">center =</span> <span class="cn">TRUE</span>, <span class="at">scale =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  d  <span class="ot">&lt;-</span> <span class="fu">svd</span>(Xs, <span class="at">nu =</span> <span class="dv">0</span>, <span class="at">nv =</span> <span class="dv">0</span>)<span class="sc">$</span>d</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sum</span>(d<span class="sc">^</span><span class="dv">2</span> <span class="sc">/</span> (d<span class="sc">^</span><span class="dv">2</span> <span class="sc">+</span> lambda))</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>rf_df_mc <span class="ot">&lt;-</span> <span class="cf">function</span>(X, y, mtry, <span class="at">num.trees =</span> <span class="dv">50</span>, <span class="at">tau =</span> <span class="fl">0.1</span> <span class="sc">*</span> <span class="fu">sd</span>(y), <span class="at">B =</span> <span class="dv">15</span>) {</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  dat0 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y =</span> y, X)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  fit0 <span class="ot">&lt;-</span> <span class="fu">ranger</span>(y <span class="sc">~</span> ., <span class="at">data =</span> dat0, <span class="at">num.trees =</span> num.trees, <span class="at">mtry =</span> mtry)</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  yhat0 <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit0, <span class="at">data =</span> dat0)<span class="sc">$</span>predictions</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>  vals <span class="ot">&lt;-</span> <span class="fu">replicate</span>(B, {</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>    omega <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="fu">length</span>(y), <span class="at">sd =</span> tau)</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>    datb <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y =</span> y <span class="sc">+</span> omega, X)</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>    fitb <span class="ot">&lt;-</span> <span class="fu">ranger</span>(y <span class="sc">~</span> ., <span class="at">data =</span> datb, <span class="at">num.trees =</span> num.trees, <span class="at">mtry =</span> mtry)</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>    yhatb <span class="ot">&lt;-</span> <span class="fu">predict</span>(fitb, <span class="at">data =</span> dat0)<span class="sc">$</span>predictions</span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>((yhatb <span class="sc">-</span> yhat0) <span class="sc">*</span> omega) <span class="sc">/</span> (tau<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mean</span>(vals)</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>run_setting_simple <span class="ot">&lt;-</span> <span class="cf">function</span>(dat,</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>                               <span class="at">test_frac =</span> <span class="fl">0.3</span>,</span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>                               <span class="at">lambda_grid =</span> <span class="dv">10</span><span class="sc">^</span><span class="fu">seq</span>(<span class="sc">-</span><span class="dv">4</span>, <span class="dv">4</span>, <span class="at">length.out =</span> <span class="dv">30</span>),</span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a>                               <span class="at">num.trees =</span> <span class="dv">200</span>,</span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>                               <span class="at">mtry_grid =</span> <span class="cn">NULL</span>,</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>                               <span class="at">B =</span> <span class="dv">20</span>,</span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>                               <span class="at">seed =</span> <span class="dv">123</span>) {</span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(seed)</span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> dat<span class="sc">$</span>X; y <span class="ot">&lt;-</span> dat<span class="sc">$</span>y</span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>  n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(X); p <span class="ot">&lt;-</span> <span class="fu">ncol</span>(X)</span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>  <span class="co"># one fixed split</span></span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>  idx <span class="ot">&lt;-</span> <span class="fu">sample</span>(<span class="fu">seq_len</span>(n), <span class="at">size =</span> <span class="fu">floor</span>((<span class="dv">1</span> <span class="sc">-</span> test_frac) <span class="sc">*</span> n))</span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a>  Xtr <span class="ot">&lt;-</span> X[idx, , drop <span class="ot">=</span> <span class="cn">FALSE</span>]; ytr <span class="ot">&lt;-</span> y[idx]</span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a>  Xte <span class="ot">&lt;-</span> X[<span class="sc">-</span>idx, , drop <span class="ot">=</span> <span class="cn">FALSE</span>]; yte <span class="ot">&lt;-</span> y[<span class="sc">-</span>idx]</span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.null</span>(mtry_grid)) {</span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a>    mtry_grid <span class="ot">&lt;-</span> <span class="fu">unique</span>(<span class="fu">round</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">8</span>, <span class="dv">12</span>, <span class="fu">sqrt</span>(p), p)))</span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a>    mtry_grid <span class="ot">&lt;-</span> mtry_grid[mtry_grid <span class="sc">&gt;=</span> <span class="dv">1</span> <span class="sc">&amp;</span> mtry_grid <span class="sc">&lt;=</span> p]</span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-43"><a href="#cb17-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-44"><a href="#cb17-44" aria-hidden="true" tabindex="-1"></a>  tau0 <span class="ot">&lt;-</span> <span class="fl">0.1</span> <span class="sc">*</span> <span class="fu">sd</span>(ytr)</span>
+<span id="cb17-45"><a href="#cb17-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-46"><a href="#cb17-46" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ---- Ridge (simple loop) ----</span></span>
+<span id="cb17-47"><a href="#cb17-47" aria-hidden="true" tabindex="-1"></a>  ridge_res <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map_dfr</span>(lambda_grid, <span class="cf">function</span>(lam) {</span>
+<span id="cb17-48"><a href="#cb17-48" aria-hidden="true" tabindex="-1"></a>    fit  <span class="ot">&lt;-</span> glmnet<span class="sc">::</span><span class="fu">glmnet</span>(Xtr, ytr, <span class="at">alpha =</span> <span class="dv">0</span>, <span class="at">lambda =</span> lam, <span class="at">standardize =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb17-49"><a href="#cb17-49" aria-hidden="true" tabindex="-1"></a>    pred <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">predict</span>(fit, <span class="at">newx =</span> Xte, <span class="at">s =</span> lam))</span>
+<span id="cb17-50"><a href="#cb17-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-51"><a href="#cb17-51" aria-hidden="true" tabindex="-1"></a>    tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb17-52"><a href="#cb17-52" aria-hidden="true" tabindex="-1"></a>      <span class="at">method    =</span> <span class="st">"Ridge"</span>,</span>
+<span id="cb17-53"><a href="#cb17-53" aria-hidden="true" tabindex="-1"></a>      <span class="at">reg_param =</span> lam,</span>
+<span id="cb17-54"><a href="#cb17-54" aria-hidden="true" tabindex="-1"></a>      <span class="at">df        =</span> <span class="fu">ridge_df</span>(Xtr, lam),</span>
+<span id="cb17-55"><a href="#cb17-55" aria-hidden="true" tabindex="-1"></a>      <span class="at">test_mse  =</span> <span class="fu">mean</span>((yte <span class="sc">-</span> pred)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb17-56"><a href="#cb17-56" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-57"><a href="#cb17-57" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb17-58"><a href="#cb17-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-59"><a href="#cb17-59" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ---- Random Forest (simple loop) ----</span></span>
+<span id="cb17-60"><a href="#cb17-60" aria-hidden="true" tabindex="-1"></a>  rf_res <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map_dfr</span>(mtry_grid, <span class="cf">function</span>(mtry_val) {</span>
+<span id="cb17-61"><a href="#cb17-61" aria-hidden="true" tabindex="-1"></a>    dat_tr <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">y =</span> ytr, Xtr)</span>
+<span id="cb17-62"><a href="#cb17-62" aria-hidden="true" tabindex="-1"></a>    dat_te <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(Xte)</span>
+<span id="cb17-63"><a href="#cb17-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-64"><a href="#cb17-64" aria-hidden="true" tabindex="-1"></a>    fit  <span class="ot">&lt;-</span> ranger<span class="sc">::</span><span class="fu">ranger</span>(y <span class="sc">~</span> ., <span class="at">data =</span> dat_tr,</span>
+<span id="cb17-65"><a href="#cb17-65" aria-hidden="true" tabindex="-1"></a>                           <span class="at">num.trees =</span> num.trees, <span class="at">mtry =</span> mtry_val)</span>
+<span id="cb17-66"><a href="#cb17-66" aria-hidden="true" tabindex="-1"></a>    pred <span class="ot">&lt;-</span> <span class="fu">predict</span>(fit, <span class="at">data =</span> dat_te)<span class="sc">$</span>predictions</span>
+<span id="cb17-67"><a href="#cb17-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-68"><a href="#cb17-68" aria-hidden="true" tabindex="-1"></a>    df_hat <span class="ot">&lt;-</span> <span class="fu">rf_df_mc</span>(</span>
+<span id="cb17-69"><a href="#cb17-69" aria-hidden="true" tabindex="-1"></a>      <span class="at">X =</span> <span class="fu">as.data.frame</span>(Xtr), <span class="at">y =</span> ytr,</span>
+<span id="cb17-70"><a href="#cb17-70" aria-hidden="true" tabindex="-1"></a>      <span class="at">mtry =</span> mtry_val, <span class="at">num.trees =</span> num.trees,</span>
+<span id="cb17-71"><a href="#cb17-71" aria-hidden="true" tabindex="-1"></a>      <span class="at">tau =</span> tau0, <span class="at">B =</span> B</span>
+<span id="cb17-72"><a href="#cb17-72" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-73"><a href="#cb17-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-74"><a href="#cb17-74" aria-hidden="true" tabindex="-1"></a>    tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb17-75"><a href="#cb17-75" aria-hidden="true" tabindex="-1"></a>      <span class="at">method    =</span> <span class="st">"Random Forest"</span>,</span>
+<span id="cb17-76"><a href="#cb17-76" aria-hidden="true" tabindex="-1"></a>      <span class="at">reg_param =</span> mtry_val,</span>
+<span id="cb17-77"><a href="#cb17-77" aria-hidden="true" tabindex="-1"></a>      <span class="at">df        =</span> df_hat,</span>
+<span id="cb17-78"><a href="#cb17-78" aria-hidden="true" tabindex="-1"></a>      <span class="at">test_mse  =</span> <span class="fu">mean</span>((yte <span class="sc">-</span> pred)<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb17-79"><a href="#cb17-79" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb17-80"><a href="#cb17-80" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb17-81"><a href="#cb17-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-82"><a href="#cb17-82" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(ridge_res, rf_res) <span class="sc">%&gt;%</span></span>
+<span id="cb17-83"><a href="#cb17-83" aria-hidden="true" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">setting =</span> dat<span class="sc">$</span>name, <span class="at">p =</span> p)</span>
+<span id="cb17-84"><a href="#cb17-84" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+</section>
+<section id="regularization-behavior" class="level3" data-number="6.2.3">
+<h3 data-number="6.2.3" class="anchored" data-anchor-id="regularization-behavior"><span class="header-section-number">6.2.3</span> Regularization behavior</h3>
+<p>We examine how regularization parameters in ridge regression and random forests map to effective degrees of freedom, following the framework of Mentch and Zhou (2020).</p>
+<hr>
+<section id="ridge-regression-1" class="level4" data-number="6.2.3.1">
+<h4 data-number="6.2.3.1" class="anchored" data-anchor-id="ridge-regression-1"><span class="header-section-number">6.2.3.1</span> Ridge regression</h4>
+<p>In ridge regression, regularization is controlled by the penalty parameter <span class="math inline">\(\lambda &gt; 0\)</span>.<br>
+The effective degrees of freedom are given by</p>
+<p><span class="math display">\[
+\mathrm{DoF}_{\text{ridge}}(\lambda)
+= \sum_{j=1}^p \frac{d_j^2}{d_j^2 + \lambda},
+\]</span></p>
+<p>where <span class="math inline">\(d_1, \dots, d_p\)</span> denote the singular values of the standardized design matrix.</p>
+<p>As <span class="math inline">\(\lambda \to 0\)</span>, the penalty vanishes and</p>
+<p><span class="math display">\[
+\mathrm{DoF}_{\text{ridge}}(\lambda) \to \mathrm{rank}(X),
+\]</span></p>
+<p>while as <span class="math inline">\(\lambda \to \infty\)</span>,</p>
+<p><span class="math display">\[
+\mathrm{DoF}_{\text{ridge}}(\lambda) \to 0.
+\]</span></p>
+<p>Thus, ridge regression spans a wide and continuous range of effective model complexity, enabling smooth traversal of the bias–variance trade-off.</p>
+</section>
+<section id="random-forests-1" class="level4" data-number="6.2.3.2">
+<h4 data-number="6.2.3.2" class="anchored" data-anchor-id="random-forests-1"><span class="header-section-number">6.2.3.2</span> Random forests</h4>
+<p>For random forests, regularization is induced by restricting the number of candidate predictors available at each split. Following Mentch and Zhou (2020), we parameterize <code>mtry</code> as a proportion of eligible predictors,</p>
+<p><span class="math display">\[
+\text{mtry} = \alpha p, \quad \alpha \in (0,1],
+\]</span></p>
+<p>where <span class="math inline">\(p\)</span> denotes the total number of predictors and <span class="math inline">\(\alpha\)</span> controls the strength of regularization. Smaller values of <span class="math inline">\(\alpha\)</span> correspond to stronger regularization, while <span class="math inline">\(\alpha = 1\)</span> recovers the fully greedy splitting rule.</p>
+<p>Degrees of freedom for random forests are defined as the sensitivity of fitted values to perturbations in the response,</p>
+<p><span class="math display">\[
+\mathrm{DoF}_{\text{RF}}
+= \sum_{i=1}^n \frac{\partial \hat{y}_i}{\partial y_i}.
+\]</span></p>
+<p>Because this quantity is not available in closed form, it is estimated using a Monte Carlo perturbation approach,</p>
+<p><span class="math display">\[
+\mathrm{DoF}_{\text{RF}}
+\approx \mathbb{E}\left[
+\frac{\left(\hat{f}(y + \omega) - \hat{f}(y)\right)^\top \omega}{\|\omega\|_2^2}
+\right],
+\]</span></p>
+<p>where <span class="math inline">\(\omega\)</span> is a small random perturbation vector and the expectation is approximated empirically.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>dat_lin  <span class="ot">&lt;-</span> <span class="fu">gen_linear_medium</span>(<span class="at">n =</span> <span class="dv">500</span>, <span class="at">p =</span> <span class="dv">100</span>, <span class="at">s =</span> <span class="dv">5</span>, <span class="at">snr =</span> <span class="dv">1</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>dat_lin<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="st">"Linear"</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>dat_mars <span class="ot">&lt;-</span> <span class="fu">gen_marsadd</span>(<span class="at">n =</span> <span class="dv">500</span>, <span class="at">snr =</span> <span class="dv">1</span>, <span class="at">seed =</span> <span class="dv">1</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>dat_mars<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="st">"MARS-additive"</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>dat_bc <span class="ot">&lt;-</span> <span class="fu">gen_data</span>(<span class="dv">200</span>)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>dat_bc<span class="sc">$</span>name <span class="ot">&lt;-</span> <span class="st">"Block-correlated"</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>res_lin  <span class="ot">&lt;-</span> <span class="fu">run_setting_simple</span>(dat_lin,  <span class="at">seed =</span> <span class="dv">123</span>)</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>res_mars <span class="ot">&lt;-</span> <span class="fu">run_setting_simple</span>(dat_mars, <span class="at">seed =</span> <span class="dv">123</span>)</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>res_bc   <span class="ot">&lt;-</span> <span class="fu">run_setting_simple</span>(dat_bc,   <span class="at">seed =</span> <span class="dv">123</span>)</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>all_res <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">bind_rows</span>(res_lin, res_mars, res_bc)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="comparison-of-regularization-effects" class="level4" data-number="6.2.3.3">
+<h4 data-number="6.2.3.3" class="anchored" data-anchor-id="comparison-of-regularization-effects"><span class="header-section-number">6.2.3.3</span> Comparison of regularization effects</h4>
+<p>Although both <span class="math inline">\(\lambda\)</span> and <span class="math inline">\(\alpha\)</span> act as regularization parameters, they induce fundamentally different complexity scales. The ridge penalty directly shrinks the linear coefficient vector and allows the model to access both low- and high-complexity regimes. In contrast, varying <span class="math inline">\(\alpha\)</span> modulates randomness and adaptivity in random forests but does not collapse the model into a globally smooth estimator. As a result, the range of achievable degrees of freedom for random forests is typically narrower and concentrated in a higher-complexity regime than that of ridge regression.</p>
+</section>
+</section>
+<section id="results-1" class="level3" data-number="6.2.4">
+<h3 data-number="6.2.4" class="anchored" data-anchor-id="results-1"><span class="header-section-number">6.2.4</span> Results</h3>
+<p>We summarize the relationship between degrees of freedom and out-of-sample predictive accuracy for ridge regression and random forests across the three data-generating settings.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(all_res, <span class="fu">aes</span>(<span class="at">x =</span> df, <span class="at">y =</span> test_mse, <span class="at">color =</span> method, <span class="at">shape =</span> method)) <span class="sc">+</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="fl">2.8</span>) <span class="sc">+</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> setting, <span class="at">scales =</span> <span class="st">"free_x"</span>) <span class="sc">+</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">13</span>) <span class="sc">+</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Degrees of freedom"</span>,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Out-of-sample predictive error (Test MSE)"</span>,</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">"Method"</span>,</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">shape =</span> <span class="st">"Method"</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="05-final_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Across all three settings, ridge regression and random forests exhibit distinct and largely non-overlapping degrees-of-freedom regimes. Ridge regression spans a wide range of complexity levels and adapts smoothly to the underlying structure when the linear model is appropriate. Random forests, even under strong regularization via <code>mtry</code>, operate in a higher-complexity regime and display a more limited range of effective degrees of freedom.</p>
+</section>
+<section id="discussion-conclusion" class="level3" data-number="6.2.5">
+<h3 data-number="6.2.5" class="anchored" data-anchor-id="discussion-conclusion"><span class="header-section-number">6.2.5</span> Discussion &amp; Conclusion</h3>
+<p>Comparing models at equivalent degrees of freedom is conceptually appealing because it aims to control for model complexity, i.e., <span class="math display">\[
+\mathrm{DoF}_A \approx \mathrm{DoF}_B
+\;\Rightarrow\;
+\text{compare test error at “similar complexity.”}
+\]</span> In practice, our results suggest this is often not a meaningful comparison between ridge regression and random forests.</p>
+<p>First, matched degrees of freedom are frequently <strong>unattainable</strong>. Ridge spans a broad complexity range via <span class="math inline">\(\lambda\)</span>, <span class="math display">\[
+\mathrm{DoF}_{\text{ridge}}(\lambda)=\sum_{j=1}^p \frac{d_j^2}{d_j^2+\lambda},
+\qquad
+\mathrm{DoF}_{\text{ridge}}(\lambda)\in(0,\mathrm{rank}(X)],
+\]</span> whereas random forests regularized through <span class="math display">\[
+\text{mtry}=\alpha p,\quad \alpha\in(0,1]
+\]</span> tend to remain in a comparatively high degrees-of-freedom regime under the Mentch–Zhou definition <span class="math display">\[
+\mathrm{DoF}_{\text{RF}}=\sum_{i=1}^n \frac{\partial \hat{y}_i}{\partial y_i}.
+\]</span> Across all three settings, the achievable DoF ranges show little overlap, making “matched-DoF” comparisons infeasible.</p>
+<p>Second, even if DoF could be matched, it would not guarantee comparable <strong>expressiveness</strong>. Ridge remains linear, <span class="math display">\[
+\hat f_{\text{ridge}}(x)=x^\top \hat\beta_\lambda,
+\]</span> so under nonlinear data-generating mechanisms (e.g., MARSadd), increasing DoF within the linear class cannot remove misspecification: <span class="math display">\[
+\inf_{\beta}\mathbb{E}\big[(f^*(X)-X^\top\beta)^2\big] &gt; 0.
+\]</span></p>
+<p>Overall, degrees of freedom are a useful within-method complexity diagnostic, but they are not a generally reliable basis for cross-model comparison between ridge regression and random forests.</p>
 
 
 </section>

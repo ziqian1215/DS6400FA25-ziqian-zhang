@@ -758,3 +758,386 @@ The blockwise analyses further clarify the interaction between correlation struc
 Finally, selection stability results show that elastic net produces more consistent variable selection across resamples than lasso, particularly in correlated blocks, underscoring the practical importance of combining sparsity and grouping effects.
 
 Taken together, these results emphasize that no single regularization method is uniformly optimal. Instead, the appropriate choice depends on the underlying signal structure, correlation patterns, and the relative importance of prediction accuracy, interpretability, and stability.
+
+
+## Question 2
+
+### Data and setup
+
+We consider three data-generating settings to examine regularization and degrees of freedom under different modeling regimes. Two of the settings follow the simulation designs of Mentch and Zhou (2020), while the third corresponds exactly to the block-correlated linear model used in Q1. Model performance is evaluated using out-of-sample mean squared error (MSE).
+
+---
+
+#### Linear Medium setting (Mentch and Zhou, 2020)
+
+We consider a sparse linear regression model with
+$$
+n = 500, \quad p = 100, \quad s = 5.
+$$
+The response is generated according to
+$$
+Y = X\beta + \varepsilon,
+$$
+where
+$$
+\beta_j =
+\begin{cases}
+1, & j = 1,\dots,s, \\
+0, & j = s+1,\dots,p,
+\end{cases}
+\quad
+\varepsilon \sim \mathcal{N}(0,\sigma^2).
+$$
+The noise variance $\sigma^2$ is chosen to achieve a fixed signal-to-noise ratio,
+$$
+\mathrm{SNR} = \frac{\mathrm{Var}(X\beta)}{\sigma^2}.
+$$
+This setting represents a regime in which the linear model is correctly specified.
+
+---
+
+#### MARSadd setting (Mentch and Zhou, 2020)
+
+To study a nonlinear data-generating mechanism, we consider the MARSadd model with
+$$
+n = 500, \quad p = s = 5,
+$$
+where predictors are sampled independently from $\mathrm{Unif}(0,1)$\)$. The response is generated as
+$$
+Y
+= 0.1 \frac{e^{4X_1}}{1 + e^{-20(X_2 - 0.5)}}
++ 3X_3 + 2X_4 + X_5
++ \varepsilon,
+\quad
+\varepsilon \sim \mathcal{N}(0,\sigma^2),
+$$
+with $\sigma^2$ chosen to control the signal-to-noise ratio. This setting introduces nonlinear and interaction effects that cannot be represented by linear models.
+
+
+#### Block-correlated linear setting (Q1)
+
+The third setting follows exactly the block-correlated linear data-generating process used in **Q1**. Predictors are partitioned into blocks with different within-block correlation structures, and the response is generated according to a sparse linear model with additive Gaussian noise. All aspects of this setting are identical to Q1 and are not repeated here.
+
+
+#### Train–test split
+
+For each setting, the data are randomly split into training and test sets. Models are fit on the training data, and predictive performance is evaluated on the test data using mean squared error. Results are averaged over repeated fits at each regularization level to reduce Monte Carlo variability.
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+library(MASS)
+library(tidyverse)
+library(glmnet)
+library(ranger)
+
+gen_linear_medium <- function(n = 500, p = 100, s = 5, snr = 1, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+
+  X <- matrix(runif(n * p), n, p)   # same "Unif(0,1)" style
+  beta <- c(rep(1, s), rep(0, p - s))
+  f <- as.numeric(X %*% beta)
+
+  # choose sigma^2 to hit target SNR = Var(f)/sigma^2
+  sigma2 <- var(f) / snr
+  y <- f + rnorm(n, sd = sqrt(sigma2))
+
+  list(X = X, y = y, name = sprintf("Linear Medium (n=%d,p=%d,s=%d,SNR=%g)", n, p, s, snr))
+}
+
+gen_marsadd <- function(n = 500, snr = 1, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+
+  p <- 5
+  X <- matrix(runif(n * p), n, p)
+
+  # One common "MARSadd" style nonlinear signal (matches the spirit of the paper)
+  f <- 0.1 * exp(4 * X[, 1]) / (1 + exp(-20 * (X[, 2] - 0.5))) +
+       3 * X[, 3] + 2 * X[, 4] + 1 * X[, 5]
+
+  sigma2 <- var(f) / snr
+  y <- f + rnorm(n, sd = sqrt(sigma2))
+
+  list(X = X, y = y, name = sprintf("MARSadd (n=%d,p=5,SNR=%g)", n, snr))
+}
+```
+### Methods
+
+We compare ridge regression and random forests under varying levels of regularization. For each method, we examine how regularization affects effective degrees of freedom and out-of-sample predictive accuracy.
+
+---
+
+#### Ridge regression
+
+Ridge regression estimates regression coefficients by solving
+$$
+\hat{\beta}_\lambda
+= \arg\min_{\beta}
+\left\{
+\|y - X\beta\|_2^2 + \lambda \|\beta\|_2^2
+\right\},
+$$
+where $\lambda > 0$ is the regularization parameter. Larger values of $\lambda$ impose stronger shrinkage and reduce model complexity.
+
+For ridge regression, the effective degrees of freedom admit a closed-form expression. Let $d_1,\dots,d_p$ denote the singular values of the standardized design matrix $X$. The degrees of freedom are given by
+$$
+\mathrm{DoF}_{\text{ridge}}(\lambda)
+= \sum_{j=1}^p \frac{d_j^2}{d_j^2 + \lambda}.
+$$
+This quantity can be interpreted as the effective number of parameters used by the model.
+
+#### Random forests
+
+Random forests are ensembles of decision trees constructed using bootstrap samples and randomized splitting rules. Following Mentch and Zhou (2020), we treat the number of candidate predictors considered at each split, denoted `mtry`, as a regularization parameter. Smaller values of `mtry` restrict the set of allowable splits and lead to stronger regularization, while larger values increase model flexibility.
+
+Degrees of freedom for random forests are defined in terms of the sensitivity of fitted values to perturbations in the response:
+$$
+\mathrm{DoF}_{\text{RF}}
+= \sum_{i=1}^n \frac{\partial \hat{y}_i}{\partial y_i}.
+$$
+Because this quantity is not available in closed form, it is estimated using a Monte Carlo perturbation approach. Specifically, for a small perturbation vector $\omega$,
+$$
+\mathrm{DoF}_{\text{RF}}
+\approx \mathbb{E}\left[
+\frac{(\hat{f}(y+\omega) - \hat{f}(y))^\top \omega}{\|\omega\|_2^2}
+\right],
+$$
+where the expectation is approximated by repeated random perturbations.
+
+---
+
+#### Model evaluation
+
+For each data-generating setting, models are fit on a training set and evaluated on a held-out test set. Predictive accuracy is measured using test mean squared error (MSE). To reduce Monte Carlo variability arising from random forest fitting and the estimation of degrees of freedom, model fitting is repeated multiple times at each regularization level, and results are summarized using average test MSE and average degrees of freedom.
+
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+
+ridge_df <- function(X, lambda) {
+  Xs <- scale(X, center = TRUE, scale = TRUE)
+  d  <- svd(Xs, nu = 0, nv = 0)$d
+  sum(d^2 / (d^2 + lambda))
+}
+
+rf_df_mc <- function(X, y, mtry, num.trees = 50, tau = 0.1 * sd(y), B = 15) {
+  dat0 <- data.frame(y = y, X)
+  fit0 <- ranger(y ~ ., data = dat0, num.trees = num.trees, mtry = mtry)
+  yhat0 <- predict(fit0, data = dat0)$predictions
+
+  vals <- replicate(B, {
+    omega <- rnorm(length(y), sd = tau)
+    datb <- data.frame(y = y + omega, X)
+    fitb <- ranger(y ~ ., data = datb, num.trees = num.trees, mtry = mtry)
+    yhatb <- predict(fitb, data = dat0)$predictions
+    sum((yhatb - yhat0) * omega) / (tau^2)
+  })
+
+  mean(vals)
+}
+run_setting_simple <- function(dat,
+                               test_frac = 0.3,
+                               lambda_grid = 10^seq(-4, 4, length.out = 30),
+                               num.trees = 200,
+                               mtry_grid = NULL,
+                               B = 20,
+                               seed = 123) {
+
+  set.seed(seed)
+  X <- dat$X; y <- dat$y
+  n <- nrow(X); p <- ncol(X)
+
+  # one fixed split
+  idx <- sample(seq_len(n), size = floor((1 - test_frac) * n))
+  Xtr <- X[idx, , drop = FALSE]; ytr <- y[idx]
+  Xte <- X[-idx, , drop = FALSE]; yte <- y[-idx]
+
+  if (is.null(mtry_grid)) {
+    mtry_grid <- unique(round(c(1, 2, 3, 5, 8, 12, sqrt(p), p)))
+    mtry_grid <- mtry_grid[mtry_grid >= 1 & mtry_grid <= p]
+  }
+
+  tau0 <- 0.1 * sd(ytr)
+
+  # ---- Ridge (simple loop) ----
+  ridge_res <- purrr::map_dfr(lambda_grid, function(lam) {
+    fit  <- glmnet::glmnet(Xtr, ytr, alpha = 0, lambda = lam, standardize = TRUE)
+    pred <- as.numeric(predict(fit, newx = Xte, s = lam))
+
+    tibble::tibble(
+      method    = "Ridge",
+      reg_param = lam,
+      df        = ridge_df(Xtr, lam),
+      test_mse  = mean((yte - pred)^2)
+    )
+  })
+
+  # ---- Random Forest (simple loop) ----
+  rf_res <- purrr::map_dfr(mtry_grid, function(mtry_val) {
+    dat_tr <- data.frame(y = ytr, Xtr)
+    dat_te <- data.frame(Xte)
+
+    fit  <- ranger::ranger(y ~ ., data = dat_tr,
+                           num.trees = num.trees, mtry = mtry_val)
+    pred <- predict(fit, data = dat_te)$predictions
+
+    df_hat <- rf_df_mc(
+      X = as.data.frame(Xtr), y = ytr,
+      mtry = mtry_val, num.trees = num.trees,
+      tau = tau0, B = B
+    )
+
+    tibble::tibble(
+      method    = "Random Forest",
+      reg_param = mtry_val,
+      df        = df_hat,
+      test_mse  = mean((yte - pred)^2)
+    )
+  })
+
+  dplyr::bind_rows(ridge_res, rf_res) %>%
+    dplyr::mutate(setting = dat$name, p = p)
+}
+```
+
+### Regularization behavior
+
+We examine how regularization parameters in ridge regression and random forests map to effective degrees of freedom, following the framework of Mentch and Zhou (2020).
+
+---
+
+#### Ridge regression
+
+In ridge regression, regularization is controlled by the penalty parameter $\lambda > 0$.  
+The effective degrees of freedom are given by
+
+$$
+\mathrm{DoF}_{\text{ridge}}(\lambda)
+= \sum_{j=1}^p \frac{d_j^2}{d_j^2 + \lambda},
+$$
+
+where $d_1, \dots, d_p$ denote the singular values of the standardized design matrix.
+
+As $\lambda \to 0$, the penalty vanishes and
+
+$$
+\mathrm{DoF}_{\text{ridge}}(\lambda) \to \mathrm{rank}(X),
+$$
+
+while as $\lambda \to \infty$,
+
+$$
+\mathrm{DoF}_{\text{ridge}}(\lambda) \to 0.
+$$
+
+Thus, ridge regression spans a wide and continuous range of effective model complexity, enabling smooth traversal of the bias–variance trade-off.
+
+#### Random forests
+
+For random forests, regularization is induced by restricting the number of candidate predictors available at each split. Following Mentch and Zhou (2020), we parameterize `mtry` as a proportion of eligible predictors,
+
+$$
+\text{mtry} = \alpha p, \quad \alpha \in (0,1],
+$$
+
+where $p$ denotes the total number of predictors and $\alpha$ controls the strength of regularization. Smaller values of $\alpha$ correspond to stronger regularization, while $\alpha = 1$ recovers the fully greedy splitting rule.
+
+Degrees of freedom for random forests are defined as the sensitivity of fitted values to perturbations in the response,
+
+$$
+\mathrm{DoF}_{\text{RF}}
+= \sum_{i=1}^n \frac{\partial \hat{y}_i}{\partial y_i}.
+$$
+
+Because this quantity is not available in closed form, it is estimated using a Monte Carlo perturbation approach,
+
+$$
+\mathrm{DoF}_{\text{RF}}
+\approx \mathbb{E}\left[
+\frac{\left(\hat{f}(y + \omega) - \hat{f}(y)\right)^\top \omega}{\|\omega\|_2^2}
+\right],
+$$
+
+where $\omega$ is a small random perturbation vector and the expectation is approximated empirically.
+
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+dat_lin  <- gen_linear_medium(n = 500, p = 100, s = 5, snr = 1, seed = 1)
+dat_lin$name <- "Linear"
+
+dat_mars <- gen_marsadd(n = 500, snr = 1, seed = 1)
+dat_mars$name <- "MARS-additive"
+
+dat_bc <- gen_data(200)
+dat_bc$name <- "Block-correlated"
+res_lin  <- run_setting_simple(dat_lin,  seed = 123)
+res_mars <- run_setting_simple(dat_mars, seed = 123)
+res_bc   <- run_setting_simple(dat_bc,   seed = 123)
+
+all_res <- dplyr::bind_rows(res_lin, res_mars, res_bc)
+```
+
+#### Comparison of regularization effects
+
+Although both $\lambda$ and $\alpha$ act as regularization parameters, they induce fundamentally different complexity scales. The ridge penalty directly shrinks the linear coefficient vector and allows the model to access both low- and high-complexity regimes. In contrast, varying $\alpha$ modulates randomness and adaptivity in random forests but does not collapse the model into a globally smooth estimator. As a result, the range of achievable degrees of freedom for random forests is typically narrower and concentrated in a higher-complexity regime than that of ridge regression.
+
+### Results
+
+We summarize the relationship between degrees of freedom and out-of-sample predictive accuracy for ridge regression and random forests across the three data-generating settings.
+
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+ggplot(all_res, aes(x = df, y = test_mse, color = method, shape = method)) +
+  geom_point(size = 2.8) +
+  facet_wrap(~ setting, scales = "free_x") +
+  theme_minimal(base_size = 13) +
+  labs(
+    x = "Degrees of freedom",
+    y = "Out-of-sample predictive error (Test MSE)",
+    color = "Method",
+    shape = "Method"
+  )
+```
+Across all three settings, ridge regression and random forests exhibit distinct and largely non-overlapping degrees-of-freedom regimes. Ridge regression spans a wide range of complexity levels and adapts smoothly to the underlying structure when the linear model is appropriate. Random forests, even under strong regularization via `mtry`, operate in a higher-complexity regime and display a more limited range of effective degrees of freedom.
+
+### Discussion & Conclusion
+
+Comparing models at equivalent degrees of freedom is conceptually appealing because it aims to control for model complexity, i.e.,
+$$
+\mathrm{DoF}_A \approx \mathrm{DoF}_B
+\;\Rightarrow\;
+\text{compare test error at “similar complexity.”}
+$$
+In practice, our results suggest this is often not a meaningful comparison between ridge regression and random forests.
+
+First, matched degrees of freedom are frequently **unattainable**. Ridge spans a broad complexity range via $\lambda$,
+$$
+\mathrm{DoF}_{\text{ridge}}(\lambda)=\sum_{j=1}^p \frac{d_j^2}{d_j^2+\lambda},
+\qquad
+\mathrm{DoF}_{\text{ridge}}(\lambda)\in(0,\mathrm{rank}(X)],
+$$
+whereas random forests regularized through
+$$
+\text{mtry}=\alpha p,\quad \alpha\in(0,1]
+$$
+tend to remain in a comparatively high degrees-of-freedom regime under the Mentch–Zhou definition
+$$
+\mathrm{DoF}_{\text{RF}}=\sum_{i=1}^n \frac{\partial \hat{y}_i}{\partial y_i}.
+$$
+Across all three settings, the achievable DoF ranges show little overlap, making “matched-DoF” comparisons infeasible.
+
+Second, even if DoF could be matched, it would not guarantee comparable **expressiveness**. Ridge remains linear,
+$$
+\hat f_{\text{ridge}}(x)=x^\top \hat\beta_\lambda,
+$$
+so under nonlinear data-generating mechanisms (e.g., MARSadd), increasing DoF within the linear class cannot remove misspecification:
+$$
+\inf_{\beta}\mathbb{E}\big[(f^*(X)-X^\top\beta)^2\big] > 0.
+$$
+
+Overall, degrees of freedom are a useful within-method complexity diagnostic, but they are not a generally reliable basis for cross-model comparison between ridge regression and random forests.
