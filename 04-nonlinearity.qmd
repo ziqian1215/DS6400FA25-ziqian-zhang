@@ -1,0 +1,118 @@
+# How Random Forests Capture Nonlinearity
+
+## A decision tree is a nonlinear, piecewise-constant function
+
+A regression tree partitions the feature space into disjoint regions:
+
+$$ 
+\mathcal{X} = \bigcup_{m=1}^{M} R_m,\qquad R_m \cap R_{m'} = \emptyset.
+$$
+
+The tree predicts using:
+
+$$
+\hat{f}_{\text{tree}}(x)
+= \sum_{m=1}^{M} c_m \, \mathbf{1}(x \in R_m),
+$$
+
+a **step function** that jumps across regions → inherently **nonlinear**.
+
+## Trees express interactions implicitly
+
+Each region is defined by multiple conditions:
+
+$$
+R_m = \bigcap_{s=1}^{k_m}
+\{ x_{j_s} < t_s \} \quad \text{or} \quad \{ x_{j_s} \ge t_s \}.
+$$
+
+So a prediction like:
+
+$$
+\hat{f}(x) = c_m  
+\text{ if } (x_1 < t_1) \land (x_3 > t_2) \land (x_2 < t_3)
+$$
+
+automatically encodes **interactions between variables**.
+
+
+## Random forests average many nonlinear trees
+
+A random forest prediction is:
+
+$$
+\hat{f}_{\text{RF}}(x)
+= \frac{1}{B} \sum_{b=1}^{B} \hat{f}_b(x).
+$$
+
+Expanding:
+
+$$
+\hat{f}_{\text{RF}}(x)
+= \frac{1}{B}
+\sum_{b=1}^{B}
+\left( \sum_{m=1}^{M_b}
+c_{bm} \, \mathbf{1}(x \in R_{bm}) \right).
+$$
+
+This is a sum of many nonlinear indicator functions, giving a highly flexible model.
+
+
+## Randomization increases functional flexibility
+
+Each tree uses different:
+
+- bootstrap samples  
+- subsets of features  
+- split thresholds  
+
+Thus its regions differ: $$ R_{b1}, R_{b2}, …$$
+
+Averaging these diverse nonlinear structures approximates:
+
+$$
+\hat{f}_{\text{RF}}(x)
+\approx \mathbb{E}_{\text{boot},\ \text{feat}}
+\left[ \hat{f}_{\text{tree}}(x) \right].
+$$
+
+
+##*Random forests can be viewed as kernel methods
+
+Define the forest kernel:
+
+$$
+K(x, x')
+= \mathbb{P}_{\theta}
+( x \text{ and } x' \text{ fall in the same leaf} ).
+$$
+
+Then the forest prediction can be written:
+
+$$
+\hat{f}_{\text{RF}}(x)
+= \sum_{i=1}^{n} \alpha_i \, K(x, x_i).
+$$
+
+This is a nonlinear kernel smoother.
+
+
+## Summary
+
+Random forests capture nonlinearity because they:
+
+- create **piecewise-constant nonlinear maps**,  
+- embed **interactions** through sequential splits,  
+- average many **different nonlinear partitions**,  
+- behave like a **data-driven nonlinear kernel estimator**.
+
+Overall:
+
+$$
+\hat{f}_{\text{RF}}(x)
+= \frac{1}{B} \sum_{b=1}^{B}
+\sum_{m=1}^{M_b}
+c_{bm}\, \mathbf{1}(x \in R_{bm}),
+$$
+
+which is fundamentally nonlinear and highly flexible.

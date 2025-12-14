@@ -11,6 +11,8 @@ book:
     - 01-performance-measures.qmd
     - 02-partial-effect-plots.qmd
     - 03-4-models.qmd
+    - 04-nonlinearity.qmd
+    - 05-final.qmd
     - summary.qmd
     - references.qmd
 

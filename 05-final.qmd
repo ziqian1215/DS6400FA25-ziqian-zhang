@@ -1,0 +1,760 @@
+# Final Exam
+
+## Question 1
+
+### Data Generating Process
+
+We generate synthetic data from a linear regression model with a finite sample size of **N = 200** observations and **p = 50** predictor variables. The response variable is generated according to
+
+$$
+Y = X\beta + \varepsilon, \qquad \varepsilon \sim \mathcal{N}(0_N, I_N),
+$$
+
+where $X \in \mathbb{R}^{N \times p}$ is the design matrix and $\beta \in \mathbb{R}^p$ is the vector of true regression coefficients.
+
+#### Block structure
+
+The predictor matrix is constructed by concatenating four blocks with heterogeneous correlation structures:
+
+$$
+X = [\, U \;\; V \;\; W \;\; Z \,],
+$$
+
+with dimensions
+
+- $U \in \mathbb{R}^{N \times 10}$
+- $V \in \mathbb{R}^{N \times 10}$
+- $W \in \mathbb{R}^{N \times 10}$
+- $Z \in \mathbb{R}^{N \times 20}$
+
+The coefficient vector is partitioned accordingly as
+
+$$
+\beta = (\alpha^\top, \gamma^\top, \delta^\top, \zeta^\top)^\top ,
+$$
+
+so that the data generating model can be written in block form as
+
+$$
+Y = U\alpha + V\gamma + W\delta + Z\zeta + \varepsilon .
+$$
+
+Each block is designed to represent a distinct regime in terms of signal strength, sparsity, and predictor correlation.
+
+| Block | Dimension | Nonzero Coefficients | Signal Strength | Correlation Structure | Purpose |
+|------|-----------|----------------------|-----------------|-----------------------|---------|
+| U | 10 | 1 (α₁ = 3) | Strong, sparse | Equicorrelated (ρ = 0.95) | Assess behavior under severe multicollinearity |
+| V | 10 | 3 (γ₁–γ₃ = 1.5) | Moderate, sparse | Equicorrelated (ρ = 0.50) | Compare methods with multiple correlated signals |
+| W | 10 | 5 (δ₁–δ₅ = 0.3) | Weak, dense | Equicorrelated (ρ = 0.20) | Examine bias–variance trade-offs under weak signals |
+| Z | 20 | 0 | None | Independent (ρ = 0) | Evaluate false positives and shrinkage of noise |
+
+
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+make_equicorr <- function(p, rho){
+  S <- matrix(rho, p, p); diag(S) <- 1
+  S
+}
+
+gen_data <- function(n=200){
+  # block sizes
+  pU <- 10; pV <- 10; pW <- 10; pZ <- 20
+  p  <- pU+pV+pW+pZ
+  
+  SU <- make_equicorr(pU, 0.95)
+  SV <- make_equicorr(pV, 0.50)
+  SW <- make_equicorr(pW, 0.20)
+  SZ <- diag(pZ)
+  
+  U <- mvtnorm::rmvnorm(n, sigma=SU)
+  V <- mvtnorm::rmvnorm(n, sigma=SV)
+  W <- mvtnorm::rmvnorm(n, sigma=SW)
+  Z <- mvtnorm::rmvnorm(n, sigma=SZ)
+  
+  X <- cbind(U,V,W,Z)
+  colnames(X) <- paste0("X", seq_len(ncol(X)))
+
+  beta <- rep(0, p)
+  # alpha
+  beta[1] <- 3
+  # gamma
+  beta[(pU+1):(pU+3)] <- 1.5
+  # delta
+  beta[(pU+pV+1):(pU+pV+5)] <- 0.3
+  # zeta already 0
+  
+  eps <- rnorm(n, 0, 1)
+  y <- as.numeric(X %*% beta + eps)
+  
+  block <- c(rep("U",pU), rep("V",pV), rep("W",pW), rep("Z",pZ))
+  list(X=X, y=y, beta=beta, block=block)
+}
+```
+### Models and Tuning Procedures
+
+All models are fit within a single train–test split using a unified workflow. All tuning and model fitting are performed using training data only, while final performance is evaluated on held-out test data.
+
+Prior to model fitting, predictors are standardized using statistics computed from the training data and applied to both training and test sets to prevent data leakage.
+
+
+#### Ordinary Least Squares (OLS)
+
+Ordinary least squares is fit on the standardized training data without regularization:
+
+$$
+\hat{\beta}^{\text{OLS}} = \arg\min_{\beta}\|Y - X\beta\|_2^2.
+$$
+
+OLS provides an unregularized reference point with minimal bias but potentially high variance, particularly in the presence of correlated predictors. Comparisons with OLS help isolate the impact of regularization.
+
+
+#### Ridge, Lasso, and Elastic Net
+
+Regularized regression models are fit using the **glmnet** framework. For ridge, lasso, and elastic net, the tuning parameter $\lambda$ is selected by cross-validation on the training data to minimize mean squared prediction error.
+
+The estimators take the form
+
+$$
+\hat{\beta}
+= \arg\min_{\beta}\|Y - X\beta\|_2^2
++ \lambda\left(
+\alpha\|\beta\|_1 + (1-\alpha)\|\beta\|_2^2
+\right),
+$$
+
+with the following special cases:
+
+- Ridge regression: $\alpha = 0$
+- Lasso regression: $\alpha = 1$
+- Elastic net: $\alpha \in (0,1)$, fixed at a predefined value
+
+For each method, the value of $\lambda$ corresponding to the minimum cross-validated error ($\lambda_{\text{min}}$) is selected, and the model is refit on the full training set at this value.
+
+#### Principal Components Regression (PCR)
+
+Principal components regression is fit by first computing the principal components of the standardized training predictors. A linear regression model is then fit using the first $k$ components.
+
+The number of retained components $k$ is selected via cross-validation by minimizing the cross-validated root mean squared error. To reduce variance, the smallest $k$ within one standard error of the minimum is chosen.
+
+#### Implementation details
+
+For each fitted model, coefficient estimates and test-set predictions are stored for downstream evaluation. Tuning parameters (selected $\lambda$ or number of components $k$) are recorded to facilitate comparison across methods.
+
+All subsequent analyses—including prediction accuracy, coefficient estimation error, variable selection stability, and block-wise diagnostics—are based on these fitted models.
+
+### Evaluation Metrics
+
+Model performance is evaluated using repeated random train–test splits. Specifically, for each repetition
+$r = 1,\dots,R$ with $R=60$, a new dataset is generated, randomly split into a training set (70%) and a test set (30%), and all models are fit and evaluated independently. This yields empirical distributions for all metrics, allowing uncertainty and variability to be assessed.
+
+---
+
+#### Out-of-sample predictive accuracy
+
+For each method and each repetition, predictive accuracy is measured using the test-set mean squared error (MSE):
+
+$$
+\text{MSE}^{(r)} = \frac{1}{n_{\text{test}}}
+\sum_{i \in \mathcal{T}_r} (y_i - \hat{y}_i)^2,
+$$
+
+where $\mathcal{T}_r$ denotes the test set for repetition $r$.
+
+To assess block-wise predictive contributions, we compute a drop-one-block increase in test MSE. For block
+$b \in \{U,V,W,Z\}$, let $\hat{y}_i^{(-b)}$ denote predictions obtained after setting coefficients in block $b$ to zero. The marginal contribution of block $b$ is defined as
+
+$$
+\Delta\text{MSE}_b^{(r)}
+= \text{MSE}_b^{(r)} - \text{MSE}^{(r)},
+$$
+
+where $\text{MSE}_b^{(r)}$ is the test MSE using $\hat{y}^{(-b)}$. Positive values indicate that the block contributes to predictive accuracy.
+
+
+#### Coefficient estimation error
+
+Accuracy of coefficient estimation is evaluated using the mean squared error between estimated and true coefficients:
+
+$$
+\text{Coef-MSE}^{(r)} = \frac{1}{p}
+\sum_{j=1}^{p} \bigl(\hat{\beta}_j^{(r)} - \beta_j\bigr)^2.
+$$
+
+Block-specific coefficient error is computed analogously by restricting the summation to coefficients belonging to a given block $b$:
+
+$$
+\text{Coef-MSE}_b^{(r)} =
+\frac{1}{|b|}
+\sum_{j \in b} \bigl(\hat{\beta}_j^{(r)} - \beta_j\bigr)^2.
+$$
+
+
+#### Variable selection stability
+
+For methods with an explicit variable selection component (lasso and elastic net), selection is defined by nonzero estimated coefficients. Let $S^{(r)} \subset \{1,\dots,p\}$ denote the selected set in repetition $r$.
+
+Stability of variable selection is quantified using the Jaccard similarity between selected sets from two repetitions $r$ and $r'$:
+
+$$
+J\bigl(S^{(r)}, S^{(r')}\bigr)
+= \frac{|S^{(r)} \cap S^{(r')}|}
+{|S^{(r)} \cup S^{(r')}|}.
+$$
+
+We compute Jaccard similarities over many randomly chosen pairs of repetitions to obtain an empirical distribution. Block-wise selection stability is computed by restricting the selected sets to indices belonging to each block.
+
+
+#### Shrinkage magnitude and coefficient patterns
+
+To summarize the degree of coefficient shrinkage, we compute the $\ell_1$ and $\ell_2$ norms of the estimated coefficient vector:
+
+$$
+\|\hat{\beta}^{(r)}\|_1 = \sum_{j=1}^{p} |\hat{\beta}_j^{(r)}|,
+\qquad
+\|\hat{\beta}^{(r)}\|_2 =
+\left(\sum_{j=1}^{p} (\hat{\beta}_j^{(r)})^2\right)^{1/2}.
+$$
+
+In addition, the full set of estimated coefficients $\hat{\beta}^{(r)}$ is retained across repetitions, enabling visualization of shrinkage patterns and comparisons across blocks with differing correlation structures.
+
+---
+
+Across all metrics, comparisons are based on the empirical distributions obtained from repeated resampling rather than single-point estimates, allowing uncertainty and variability to be explicitly assessed.
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+#| include: false
+#| echo: false
+#| results: hide
+pkgs <- c("MASS","mvtnorm","glmnet","pls","dplyr","tidyr","purrr","ggplot2","tibble","kableExtra")
+to_install <- pkgs[!pkgs %in% rownames(installed.packages())]
+if(length(to_install)) install.packages(to_install, repos="https://cloud.r-project.org")
+lapply(pkgs, library, character.only=TRUE)
+set.seed(1)
+```
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+scale_train_test <- function(Xtr, Xte){
+  mu <- colMeans(Xtr)
+  sd <- apply(Xtr, 2, sd)
+  sd[sd == 0] <- 1
+
+  Xtr_s <- sweep(sweep(Xtr, 2, mu, "-"), 2, sd, "/")
+  Xte_s <- sweep(sweep(Xte, 2, mu, "-"), 2, sd, "/")
+
+  colnames(Xtr_s) <- colnames(Xtr)
+  colnames(Xte_s) <- colnames(Xtr)
+
+  list(Xtr = Xtr_s, Xte = Xte_s, mu = mu, sd = sd)
+}
+
+
+block_mse <- function(beta_hat, beta_true, block){
+  tibble(
+    block = c("U","V","W","Z"),
+    coef_mse = c(
+      mean((beta_hat[block=="U"]-beta_true[block=="U"])^2),
+      mean((beta_hat[block=="V"]-beta_true[block=="V"])^2),
+      mean((beta_hat[block=="W"]-beta_true[block=="W"])^2),
+      mean((beta_hat[block=="Z"]-beta_true[block=="Z"])^2)
+    )
+  )
+}
+
+drop_block_delta_mse <- function(Xte, yte, beta_hat, block){
+  yhat_full <- as.numeric(Xte %*% beta_hat)
+  mse_full  <- mean((yte - yhat_full)^2)
+  deltas <- map_dbl(c("U","V","W","Z"), function(b){
+    beta2 <- beta_hat
+    beta2[block==b] <- 0
+    mse2 <- mean((yte - as.numeric(Xte %*% beta2))^2)
+    mse2 - mse_full
+  })
+  tibble(block=c("U","V","W","Z"), delta_mse=deltas)
+}
+
+fit_one_split <- function(dat, test_frac=0.3, alpha_en=0.5){
+  X <- dat$X; y <- dat$y; beta_true <- dat$beta; block <- dat$block
+  n <- nrow(X)
+  id_te <- sample.int(n, size=floor(test_frac*n))
+  id_tr <- setdiff(seq_len(n), id_te)
+  
+  Xtr0 <- X[id_tr,]; ytr <- y[id_tr]
+  Xte0 <- X[id_te,]; yte <- y[id_te]
+  
+  sc <- scale_train_test(Xtr0, Xte0)
+  Xtr <- sc$Xtr; Xte <- sc$Xte
+  
+  out <- list()
+  
+  # ----- OLS -----
+  ols_fit <- lm(ytr ~ Xtr)
+  beta_ols <- coef(ols_fit)[-1]
+  yhat <- as.numeric(cbind(1,Xte) %*% coef(ols_fit))
+  out$ols <- list(beta=beta_ols, yhat=yhat, tune=NA)
+  
+  # ----- Ridge -----
+  cv_r <- cv.glmnet(Xtr, ytr, alpha=0, standardize=FALSE)
+  b_r <- as.numeric(coef(cv_r, s="lambda.min"))[-1]
+  yhat_r <- as.numeric(predict(cv_r, newx=Xte, s="lambda.min"))
+  out$ridge <- list(beta=b_r, yhat=yhat_r, tune=cv_r$lambda.min)
+  
+  # ----- Lasso -----
+  cv_l <- cv.glmnet(Xtr, ytr, alpha=1, standardize=FALSE)
+  b_l <- as.numeric(coef(cv_l, s="lambda.min"))[-1]
+  yhat_l <- as.numeric(predict(cv_l, newx=Xte, s="lambda.min"))
+  out$lasso <- list(beta=b_l, yhat=yhat_l, tune=cv_l$lambda.min)
+  
+  # ----- Elastic Net (alpha fixed) -----
+  cv_e <- cv.glmnet(Xtr, ytr, alpha=alpha_en, standardize=FALSE)
+  b_e <- as.numeric(coef(cv_e, s="lambda.min"))[-1]
+  yhat_e <- as.numeric(predict(cv_e, newx=Xte, s="lambda.min"))
+  out$enet <- list(beta=b_e, yhat=yhat_e, tune=cv_e$lambda.min)
+  
+  # ----- PCR -----
+  df_tr <- data.frame(y=ytr, Xtr)
+
+  pcr_fit <- pcr(y ~ ., data=df_tr, scale=FALSE, validation="CV", segments=10)
+  # choose k by CV RMSEP
+  rmsep <- RMSEP(pcr_fit, estimate="CV")
+
+  rm <- as.numeric(rmsep$val[1,1,-1, drop=TRUE])
+  se <- as.numeric(rmsep$se[1,1,-1, drop=TRUE])
+  
+  k_min <- which.min(rm)
+  thr <- rm[k_min] + se[k_min]
+  idx <- which(rm <= thr)
+  
+  k_best <- if(length(idx)==0) k_min else idx[1]
+  print(c(k_min=k_min, k_best=k_best))
+
+  df_te <- as.data.frame(Xte)  # must have same column names as training predictors
+  yhat_p <- as.numeric(predict(pcr_fit, newdata = df_te, ncomp = k_best))
+  
+  # coefficients in original X space (no intercept)
+  b_p <- as.numeric(coef(pcr_fit, ncomp = k_best, intercept = FALSE))
+  out$pcr <- list(beta = b_p, yhat = yhat_p, tune = k_best)
+
+  
+  # ---- assemble metrics tidy ----
+  methods <- names(out)
+  res_main <- map_dfr(methods, function(m){
+    bh <- out[[m]]$beta
+    mse <- mean((yte - out[[m]]$yhat)^2)
+    coefmse <- mean((bh - beta_true)^2)
+    tibble(method=m, test_mse=mse, coef_mse=coefmse,
+           tune=out[[m]]$tune,
+           l1=sum(abs(bh)), l2=sqrt(sum(bh^2)))
+  })
+  
+  res_coef_block <- map_dfr(methods, function(m){
+    block_mse(out[[m]]$beta, beta_true, block) %>%
+      mutate(method=m)
+  })
+  
+  res_drop <- map_dfr(methods, function(m){
+    drop_block_delta_mse(Xte, yte, out[[m]]$beta, block) %>%
+      mutate(method=m)
+  })
+  
+  # selection info (lasso + enet)
+  sel <- map_dfr(c("lasso","enet"), function(m){
+    bh <- out[[m]]$beta
+    tibble(method=m,
+           n_selected=sum(bh!=0),
+           nU=sum(bh[block=="U"]!=0),
+           nV=sum(bh[block=="V"]!=0),
+           nW=sum(bh[block=="W"]!=0),
+           nZ=sum(bh[block=="Z"]!=0),
+           selected=list(as.integer(bh!=0)))
+  })
+  
+    # ---- store beta_hat for all methods (for shrinkage + correlation behavior) ----
+  beta_hat_long <- map_dfr(methods, function(m){
+    tibble(
+      method = m,
+      j = seq_along(out[[m]]$beta),
+      beta_hat = out[[m]]$beta
+    )
+  })
+
+  list(main=res_main, coef_block=res_coef_block, drop=res_drop, sel=sel, beta_hat_long=beta_hat_long)
+
+}
+
+jaccard <- function(a,b){
+  inter <- sum(a==1 & b==1)
+  uni   <- sum(a==1 | b==1)
+  if(uni==0) return(1)
+  inter/uni
+}
+
+jaccard_restrict <- function(a, b, idx){
+  a <- a[idx]; b <- b[idx]
+  inter <- sum(a==1 & b==1)
+  uni   <- sum(a==1 | b==1)
+  if(uni==0) return(1)
+  inter/uni
+}
+
+get_jaccard_df <- function(sel_df_method, n_pairs=2000){
+  mats <- do.call(rbind, sel_df_method$selected)  # R x p
+  Rn <- nrow(mats)
+  pairs <- replicate(n_pairs, sample.int(Rn, 2))
+  js <- apply(pairs, 2, \(ij) jaccard(mats[ij[1],], mats[ij[2],]))
+  tibble::tibble(jaccard = js)
+}
+
+get_jaccard_block_df <- function(sel_df_method, block_vec, n_pairs=2000){
+  mats <- do.call(rbind, sel_df_method$selected)  # R x p
+  Rn <- nrow(mats)
+  pairs <- replicate(n_pairs, sample.int(Rn, 2))
+  
+  blocks <- unique(block_vec)
+  purrr::map_dfr(blocks, function(bk){
+    idx <- which(block_vec == bk)
+    js <- apply(pairs, 2, \(ij) jaccard_restrict(mats[ij[1],], mats[ij[2],], idx))
+    tibble::tibble(block=bk, jaccard=js)
+  })
+}
+```
+
+### Results
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+#| include: false
+#| echo: false
+dat <- gen_data(n=200)
+
+R <- 60
+all <- vector("list", R)
+for(r in 1:R){
+  dat_r <- gen_data(n=200)
+  all[[r]] <- fit_one_split(dat_r, test_frac=0.3, alpha_en=0.5)
+}
+
+
+main_df <- bind_rows(lapply(seq_len(R), \(r) mutate(all[[r]]$main, rep=r)))
+coef_block_df <- bind_rows(lapply(seq_len(R), \(r) mutate(all[[r]]$coef_block, rep=r)))
+drop_df <- bind_rows(lapply(seq_len(R), \(r) mutate(all[[r]]$drop, rep=r)))
+sel_df <- bind_rows(lapply(seq_len(R), \(r) mutate(all[[r]]$sel, rep=r)))
+beta_hat_df <- bind_rows(lapply(seq_len(R), \(r) mutate(all[[r]]$beta_hat_long, rep=r)))
+
+block_vec <- dat$block
+beta_hat_df <- beta_hat_df %>% mutate(block = block_vec[j])
+beta_hat_df$method <- factor(beta_hat_df$method, levels=c("ols","ridge","lasso","enet","pcr"))
+main_df$method <- factor(main_df$method, levels=c("ols","ridge","lasso","enet","pcr"))
+coef_block_df$method <- factor(coef_block_df$method, levels=c("ols","ridge","lasso","enet","pcr"))
+drop_df$method <- factor(drop_df$method, levels=c("ols","ridge","lasso","enet","pcr"))
+sel_df$method <- factor(sel_df$method, levels=c("lasso","enet"))
+
+# ---------- overall Jaccard (selection stability overall) ----------
+jac_df <- dplyr::bind_rows(
+  get_jaccard_df(dplyr::filter(sel_df, method=="lasso")) %>% dplyr::mutate(method="lasso"),
+  get_jaccard_df(dplyr::filter(sel_df, method=="enet"))  %>% dplyr::mutate(method="enet")
+) %>%
+  dplyr::mutate(method = factor(method, levels=c("lasso","enet")))
+
+# ---------- blockwise Jaccard (selection stability by block) ----------
+jac_block_df <- dplyr::bind_rows(
+  get_jaccard_block_df(dplyr::filter(sel_df, method=="lasso"), dat$block) %>% dplyr::mutate(method="lasso"),
+  get_jaccard_block_df(dplyr::filter(sel_df, method=="enet"),  dat$block) %>% dplyr::mutate(method="enet")
+) %>%
+  dplyr::mutate(
+    method = factor(method, levels=c("lasso","enet")),
+    block  = factor(block, levels=c("U","V","W","Z"))
+  )
+
+# ---------- shrinkage magnitude by block ----------
+block_l2_df <- beta_hat_df %>%
+  dplyr::group_by(rep, method, block) %>%
+  dplyr::summarise(block_l2 = sqrt(sum(beta_hat^2)), .groups="drop")
+
+# ---------- coefficient instability (correlation behavior): sd(beta_hat) by variable ----------
+beta_sd_var <- beta_hat_df %>%
+  dplyr::group_by(method, j, block) %>%
+  dplyr::summarise(sd_beta = sd(beta_hat), .groups="drop")
+#| results: hide
+```
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+#| include: false
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# method order + nicer labels
+method_levels <- c("ols","ridge","lasso","enet","pcr")
+method_labels <- c(
+  ols   = "OLS",
+  ridge = "Ridge",
+  lasso = "Lasso",
+  enet  = "Elastic Net",
+  pcr   = "PCR"
+)
+pal <- c(
+  ols   = "#7F7F7F",
+  ridge = "#1F77B4",
+  lasso = "#FF7F0E",
+  enet  = "#2CA02C",
+  pcr   = "#9467BD"
+)
+pal_sel <- pal[c("lasso","enet")]
+
+theme_pub <- theme_bw(base_size = 12) +
+  theme(
+    legend.position = "top",
+    axis.text.x = element_text(angle = 60, hjust = 1),
+    panel.grid.minor = element_blank(),
+    strip.background = element_rect(fill = "grey95", color = "grey80"),
+    strip.text = element_text(face = "bold")
+  )
+```
+
+#### Predictive performance and bias–variance trade-off
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+p_pred_overall <- ggplot(main_df, aes(x=method, y=test_mse, fill=method, color=method)) +
+  geom_violin(trim=FALSE, alpha=0.25, linewidth=0) +
+  geom_boxplot(width=0.15, outlier.shape=NA, alpha=0.55, color="black") +
+  geom_point(alpha=0.25, position=position_jitter(width=0.10, height=0), size=1) +
+  scale_fill_manual(values=pal, labels=method_labels) +
+  scale_color_manual(values=pal, labels=method_labels) +
+  scale_x_discrete(labels=method_labels) +
+  labs(x=NULL, y="Test MSE", title="Out-of-sample predictive accuracy (overall)") +
+  theme_pub
+
+p_pred_overall
+
+drop_df$block <- factor(drop_df$block, levels=c("U","V","W","Z"))
+
+p_pred_block <- ggplot(drop_df, aes(x=method, y=delta_mse, fill=method, color=method)) +
+  geom_violin(trim=FALSE, alpha=0.25, linewidth=0) +
+  geom_boxplot(width=0.15, outlier.shape=NA, alpha=0.55, color="black") +
+  facet_wrap(~block, nrow=1) +
+  scale_fill_manual(values=pal, labels=method_labels) +
+  scale_color_manual(values=pal, labels=method_labels) +
+  scale_x_discrete(labels=method_labels) +
+  labs(x=NULL, y=expression(Delta~"MSE when dropping block"),
+       title="Out-of-sample predictive contribution by block (drop-one-block ΔMSE)") +
+  theme_pub
+
+p_pred_block
+
+```
+Regularized methods outperform OLS in out-of-sample prediction, illustrating the bias–variance trade-off in the presence of correlated predictors. While OLS is unbiased, its high variance leads to inferior generalization. Ridge reduces variance through uniform shrinkage but offers limited gains when noise variables are present. Lasso and Elastic Net achieve the best predictive performance by reducing effective model complexity through shrinkage and sparsity. PCR provides weaker improvements, indicating that dimension reduction alone is insufficient when signal is sparse at the variable level.
+
+#### Coefficient estimation accuracy
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+p_coef_overall <- ggplot(main_df, aes(x=method, y=coef_mse, fill=method, color=method)) +
+  geom_violin(trim=FALSE, alpha=0.25, linewidth=0) +
+  geom_boxplot(width=0.15, outlier.shape=NA, alpha=0.55, color="black") +
+  geom_point(alpha=0.25, position=position_jitter(width=0.10, height=0), size=1) +
+  scale_fill_manual(values=pal, labels=method_labels) +
+  scale_color_manual(values=pal, labels=method_labels) +
+  scale_x_discrete(labels=method_labels) +
+  labs(x=NULL, y="Coefficient MSE", title="Coefficient estimation error (overall)") +
+  theme_pub
+
+p_coef_overall
+
+coef_block_df$block <- factor(coef_block_df$block, levels=c("U","V","W","Z"))
+
+p_coef_block <- ggplot(coef_block_df, aes(x=method, y=coef_mse, fill=method, color=method)) +
+  geom_violin(trim=FALSE, alpha=0.25, linewidth=0) +
+  geom_boxplot(width=0.15, outlier.shape=NA, alpha=0.55, color="black") +
+  facet_wrap(~block, nrow=1) +
+  scale_fill_manual(values=pal, labels=method_labels) +
+  scale_color_manual(values=pal, labels=method_labels) +
+  scale_x_discrete(labels=method_labels) +
+  labs(x=NULL, y="Blockwise coefficient MSE", title="Coefficient estimation error by block") +
+  theme_pub
+
+p_coef_block
+```
+Coefficient estimation accuracy improves substantially under regularization. Lasso yields the lowest estimation error by eliminating weak and null coefficients, whereas Ridge introduces bias through uniform shrinkage of all coefficients. Elastic Net balances these effects, achieving moderate estimation error while improving stability. PCR performs poorly in coefficient recovery due to misalignment between principal components and the true sparse structure.
+
+#### Variable selection, sparsity, and stability
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+p_sel_stab_overall <- ggplot(jac_df, aes(x=method, y=jaccard, fill=method, color=method)) +
+  geom_violin(trim=FALSE, alpha=0.25, linewidth=0) +
+  geom_boxplot(width=0.15, outlier.shape=NA, alpha=0.55, color="black") +
+  scale_fill_manual(values=pal_sel, labels=c(lasso="Lasso", enet="Elastic Net")) +
+  scale_color_manual(values=pal_sel, labels=c(lasso="Lasso", enet="Elastic Net")) +
+  scale_x_discrete(labels=c(lasso="Lasso", enet="Elastic Net")) +
+  labs(x=NULL, y="Jaccard similarity",
+       title="Selection stability across resamples (overall)") +
+  theme_pub
+
+p_sel_stab_overall
+
+sel_long <- sel_df %>%
+  select(rep, method, n_selected, nU, nV, nW, nZ) %>%
+  pivot_longer(cols=c(n_selected,nU,nV,nW,nZ), names_to="block", values_to="count") %>%
+  mutate(block = recode(block, n_selected="Overall", nU="U", nV="V", nW="W", nZ="Z"),
+         block = factor(block, levels=c("Overall","U","V","W","Z")))
+
+p_sel_stab_block <- ggplot(jac_block_df, aes(x=method, y=jaccard, fill=method, color=method)) +
+  geom_violin(trim=FALSE, alpha=0.25, linewidth=0) +
+  geom_boxplot(width=0.15, outlier.shape=NA, alpha=0.55, color="black") +
+  facet_wrap(~block, nrow=1) +
+  scale_fill_manual(values=pal_sel, labels=c(lasso="Lasso", enet="Elastic Net")) +
+  scale_color_manual(values=pal_sel, labels=c(lasso="Lasso", enet="Elastic Net")) +
+  scale_x_discrete(labels=c(lasso="Lasso", enet="Elastic Net")) +
+  labs(x=NULL, y="Jaccard similarity",
+       title="Selection stability across resamples (by block)") +
+  theme_pub
+
+p_sel_stab_block
+p_sel_count <- ggplot(sel_long, aes(x=method, y=count, fill=method, color=method)) +
+  geom_violin(trim=FALSE, alpha=0.25, linewidth=0) +
+  geom_boxplot(width=0.15, outlier.shape=NA, alpha=0.55, color="black") +
+  facet_wrap(~block, nrow=1) +
+  scale_fill_manual(values=pal_sel, labels=c(lasso="Lasso", enet="Elastic Net")) +
+  scale_color_manual(values=pal_sel, labels=c(lasso="Lasso", enet="Elastic Net")) +
+  scale_x_discrete(labels=c(lasso="Lasso", enet="Elastic Net")) +
+  labs(x=NULL, y="# selected variables",
+       title="Selection sparsity (counts) overall and by block") +
+  theme_pub
+
+p_sel_count
+
+jac_block_df$block <- factor(jac_block_df$block, levels=c("U","V","W","Z"))
+```
+Lasso produces sparse but unstable variable selection, particularly in highly correlated predictor blocks. Elastic Net selects larger but more stable sets of variables by encouraging grouped selection among correlated predictors. This highlights a fundamental trade-off between sparsity and stability in penalized regression.
+
+#### Shrinkage behavior
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+p_shrink_overall <- ggplot(main_df, aes(x=method, y=l2, fill=method, color=method)) +
+  geom_violin(trim=FALSE, alpha=0.25, linewidth=0) +
+  geom_boxplot(width=0.15, outlier.shape=NA, alpha=0.55, color="black") +
+  scale_fill_manual(values=pal, labels=method_labels) +
+  scale_color_manual(values=pal, labels=method_labels) +
+  scale_x_discrete(labels=method_labels) +
+  labs(x=NULL, y=expression(paste("||", hat(beta), "||"[2])),
+       title="Shrinkage magnitude (overall L2 norm)") +
+  theme_pub
+
+p_shrink_overall
+
+block_l2_df$block <- factor(block_l2_df$block, levels=c("U","V","W","Z"))
+block_l2_df$method <- factor(block_l2_df$method, levels=method_levels)
+
+p_shrink_block <- ggplot(block_l2_df, aes(x=method, y=block_l2, fill=method, color=method)) +
+  geom_violin(trim=FALSE, alpha=0.25, linewidth=0) +
+  geom_boxplot(width=0.15, outlier.shape=NA, alpha=0.55, color="black") +
+  facet_wrap(~block, nrow=1) +
+  scale_fill_manual(values=pal, labels=method_labels) +
+  scale_color_manual(values=pal, labels=method_labels) +
+  scale_x_discrete(labels=method_labels) +
+  labs(x=NULL, y=expression(paste("||", hat(beta)[block], "||"[2])),
+       title="Shrinkage magnitude by block (L2 norm)") +
+  theme_pub
+
+p_shrink_block
+
+# need beta_hat_df + true beta vector and block vector
+beta_true_df <- tibble(j=seq_along(dat$beta), beta_true=dat$beta, block=dat$block)
+
+beta_mean_df <- beta_hat_df %>%
+  group_by(method, j, block) %>%
+  summarise(beta_hat_mean = mean(beta_hat), .groups="drop") %>%
+  left_join(beta_true_df, by=c("j","block"))
+
+p_pattern_scatter <- ggplot(beta_mean_df, aes(x=beta_true, y=beta_hat_mean, color=block)) +
+  geom_hline(yintercept=0, linewidth=0.3, alpha=0.5) +
+  geom_vline(xintercept=0, linewidth=0.3, alpha=0.5) +
+  geom_point(alpha=0.7, size=1.4) +
+  facet_wrap(~method, nrow=1, labeller=as_labeller(method_labels)) +
+  labs(x=expression(beta[j]~"(true)"),
+       y=expression(bar(hat(beta))[j]~"(mean over resamples)"),
+       title="Shrinkage pattern: true vs estimated coefficients (colored by block)") +
+  theme_pub
+
+p_pattern_scatter
+
+```
+Shrinkage behavior differs markedly across methods: Ridge applies strong global shrinkage, Lasso induces exact zeros, Elastic Net combines both mechanisms, and PCR lacks direct shrinkage in the original predictor space. In highly correlated blocks, OLS and PCR exhibit substantial coefficient instability, Ridge stabilizes estimates via shrinkage, and Elastic Net mitigates instability through grouped selection, whereas Lasso remains sensitive to correlation structure.
+
+#### Effects of correlated predictors
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+beta_sd_var$block <- factor(beta_sd_var$block, levels=c("U","V","W","Z"))
+beta_sd_var$method <- factor(beta_sd_var$method, levels=method_levels)
+
+p_corr_behavior <- ggplot(beta_sd_var, aes(x=block, y=sd_beta, fill=block)) +
+  geom_boxplot(outlier.shape=NA, alpha=0.55) +
+  geom_jitter(alpha=0.20, width=0.15, size=1) +
+  facet_wrap(~method, nrow=1, labeller=as_labeller(method_labels)) +
+  labs(x="Block", y=expression(sd(hat(beta)[j])),
+       title="Effect of correlation: coefficient instability by block") +
+  theme_pub +
+  theme(legend.position="none")
+
+p_corr_behavior
+
+```
+Correlation among predictors has a pronounced impact on model behavior. In highly correlated blocks, OLS and PCR exhibit substantial coefficient instability due to near-nonidentifiability of the regression problem.
+
+### Summary
+```{r}
+#| message: false
+#| warning: false
+#| code-fold: true
+library(kableExtra)
+summary_table <- main_df %>%
+  group_by(method) %>%
+  summarise(
+    `Test MSE` = mean(test_mse),
+    `Coef MSE` = mean(coef_mse),
+    `||β̂||₂` = mean(l2),
+    .groups = "drop"
+  )
+knitr::kable(
+  summary_table,
+  digits = 3,
+  caption = "Overall predictive and estimation performance across methods",
+  col.names = c("Method", "Test MSE", "Coefficient MSE", "L2 Norm of β̂")
+)
+```
+| Method        | Prediction | Coefficient Accuracy | Sparsity | Selection Stability | Correlated Predictors | Key Trade-off |
+|---------------|------------|----------------------|----------|---------------------|-----------------------|---------------|
+| OLS           | Poor       | Moderate             | None     | N/A                 | Very unstable         | Unbiased but high variance |
+| Ridge         | Moderate   | Poor–Moderate        | None     | N/A                 | Stable shrinkage      | Variance reduction without sparsity |
+| Lasso         | Best       | Best                 | High     | Low                 | Unstable selection    | Sparsity vs stability |
+| Elastic Net   | Best       | Moderate–Good        | Moderate | High                | Grouped selection     | Balanced regularization |
+| PCR           | Moderate   | Poor                 | Implicit | N/A                 | Depends on alignment  | Dimension reduction vs sparsity |
+
+This exercise highlights how different regularization strategies trade off bias, variance, sparsity, and stability in a structured, correlated predictor setting.
+
+Overall, methods that explicitly impose sparsity—lasso and elastic net—achieve superior out-of-sample predictive accuracy and substantially lower coefficient estimation error compared to unregularized OLS and dimension-reduction-based PCR. In particular, lasso performs best in terms of both prediction and estimation when the true signal is sparse, as it effectively suppresses noise variables while retaining the dominant coefficients.
+
+Ridge regression exhibits the strongest overall shrinkage and the most stable coefficient estimates under high within-block correlation, but this comes at the cost of higher estimation bias and weaker variable discrimination. Elastic net balances these behaviors by combining $\ell_1$-induced sparsity with $\ell_2$-based stabilization, leading to improved selection stability relative to lasso while maintaining competitive predictive performance.
+
+The blockwise analyses further clarify the interaction between correlation structure and regularization. Highly correlated blocks benefit from shrinkage-based methods, while sparsity-driven methods more accurately identify truly active predictors within moderately correlated blocks. Blocks containing no signal are consistently downweighted, especially by lasso and elastic net, demonstrating effective regularization against overfitting.
+
+Finally, selection stability results show that elastic net produces more consistent variable selection across resamples than lasso, particularly in correlated blocks, underscoring the practical importance of combining sparsity and grouping effects.
+
+Taken together, these results emphasize that no single regularization method is uniformly optimal. Instead, the appropriate choice depends on the underlying signal structure, correlation patterns, and the relative importance of prediction accuracy, interpretability, and stability.
